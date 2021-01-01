@@ -165,3 +165,9 @@ void RemoveFlag(int &flags, int flag) {
 void ToggleFlag(int &flags, int flag) {
 	flags ^= flag;
 }
+
+// sets the first argument the new anim, but toogling the toogle bit
+void BG_NewAnim(int &anim, int newAnim) {
+	int toogled_tooglebit = ~anim & ANIM_TOGGLEBIT;
+	anim = newAnim | toogled_tooglebit;
+}

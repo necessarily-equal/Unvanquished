@@ -553,13 +553,11 @@ void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, in
 			}
 		}
 
-		self->client->ps.legsAnim =
-		  ( ( self->client->ps.legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT ) | anim;
+		BG_NewAnim( self->client->ps.legsAnim, anim );
 
 		if ( !( self->client->ps.persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
 		{
-			self->client->ps.torsoAnim =
-			  ( ( self->client->ps.torsoAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT ) | anim;
+			BG_NewAnim( self->client->ps.torsoAnim, anim );
 		}
 
 		// use own entityid if killed by non-client to prevent uint8_t overflow

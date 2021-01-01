@@ -92,8 +92,7 @@ void PM_StartTorsoAnim( int anim )
 		return;
 	}
 
-	pm->ps->torsoAnim = ( ( pm->ps->torsoAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
-	                    | anim;
+	BG_NewAnim( pm->ps->torsoAnim, anim );
 }
 
 /*
@@ -108,8 +107,7 @@ static void PM_StartWeaponAnim( int anim )
 		return;
 	}
 
-	pm->ps->weaponAnim = ( ( pm->ps->weaponAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
-	                     | anim;
+	BG_NewAnim( pm->ps->weaponAnim, anim );
 }
 
 /*
@@ -140,8 +138,7 @@ static void PM_StartLegsAnim( int anim )
 		}
 	}
 
-	pm->ps->legsAnim = ( ( pm->ps->legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
-	                   | anim;
+	BG_NewAnim( pm->ps->legsAnim, anim );
 }
 
 /*

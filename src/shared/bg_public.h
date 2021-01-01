@@ -1452,6 +1452,7 @@ void     ModifyFlag(int &flags, int flag, bool value);
 void     AddFlag(int &flags, int flag);
 void     RemoveFlag(int &flags, int flag);
 void     ToggleFlag(int &flags, int flag);
+void     BG_NewAnim(int &anim, int newAnim);
 
 bool BG_WeaponIsFull(int weapon, int ammo, int clips );
 bool BG_InventoryContainsWeapon( int weapon, const int stats[] );
