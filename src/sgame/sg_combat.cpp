@@ -512,7 +512,7 @@ void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, in
 	memset( self->client->ps.misc, 0, sizeof( self->client->ps.misc ) );
 
 	{
-		static int i;
+		static int i=0;
 
 		if ( !( self->client->ps.persistant[ PERS_STATE ] & PS_NONSEGMODEL ) )
 		{
@@ -527,9 +527,10 @@ void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, in
 					break;
 
 				case 2:
-				default:
 					anim = BOTH_DEATH3;
 					break;
+				default:
+					ASSERT_UNREACHABLE();
 			}
 		}
 		else
@@ -545,9 +546,10 @@ void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, in
 					break;
 
 				case 2:
-				default:
 					anim = NSPA_DEATH3;
 					break;
+				default:
+					ASSERT_UNREACHABLE();
 			}
 		}
 
@@ -565,7 +567,7 @@ void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, in
 		            ( killer < MAX_CLIENTS ) ? killer : self - g_entities );
 
 		// globally cycle through the different death animations
-		i = ( i + 1 ) % 3;
+		//i = ( i + 1 ) % 3; // uncomment once https://github.com/Unvanquished/Unvanquished/issues/1260 is fixed.
 	}
 
 	Beacon::DetachTags( self );
