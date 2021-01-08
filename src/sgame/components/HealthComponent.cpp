@@ -76,9 +76,6 @@ Util::optional<Vec3> direction, int flags, meansOfDeath_t meansOfDeath) {
 	if (!(flags & DAMAGE_NO_PROTECTION)) {
 		// Check for protection from friendly damage.
 		if (entity.oldEnt != source && G_OnSameTeam(entity.oldEnt, source)) {
-			// Check if friendly fire has been disabled.
-			if (!g_friendlyFire.integer) return;
-
 			// Never do friendly damage on movement attacks.
 			switch (meansOfDeath) {
 				case MOD_LEVEL3_POUNCE:
@@ -119,9 +116,30 @@ Util::optional<Vec3> direction, int flags, meansOfDeath_t meansOfDeath) {
 
 	float take = amount;
 
+	// halve team damage according to the team, ignoring buildings
+	if (entity.oldEnt != source && G_OnSameTeam(entity.oldEnt, source)
+			&& entity.oldEnt->s.eType != entityType_t::ET_BUILDABLE) {
+		if ( G_Team(source) == TEAM_ALIENS )
+		{
+			take *= g_friendlyFireAlienMultiplier.value;
+		}
+		else
+		{
+			take *= g_friendlyFireHumanMultiplier.value;
+		}
+	}
+
+
 	// Apply damage modifiers.
 	if (!(flags & DAMAGE_PURE)) {
 		entity.ApplyDamageModifier(take, location, direction, flags, meansOfDeath);
+	}
+
+	// if we don't actually take damage, stop here
+	if ( take == 0.0f )
+	{
+		return;
+		// FIXME: this disables the damage indicator, but still shows blood
 	}
 
 	// Update combat timers.
