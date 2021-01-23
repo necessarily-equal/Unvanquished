@@ -117,7 +117,7 @@ Util::optional<Vec3> direction, int flags, meansOfDeath_t meansOfDeath) {
 	float take = amount;
 
 	// halve team damage according to the team, ignoring buildings
-	if (entity.oldEnt != source && G_OnSameTeam(entity.oldEnt, source)
+	if (G_OnSameTeam(entity.oldEnt, source)
 			&& entity.oldEnt->s.eType != entityType_t::ET_BUILDABLE) {
 		if ( G_Team(source) == TEAM_ALIENS )
 		{
