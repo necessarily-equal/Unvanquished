@@ -2231,6 +2231,73 @@ private:
 	std::unordered_map<int, std::string> pluralSuffix;
 };
 
+class ZapHudElement : public HudElement
+{
+public:
+	ZapHudElement ( const Rocket::Core::String& tag ) :
+	HudElement ( tag, ELEMENT_ALIENS ),
+	t0 ( 0 ),
+	charging ( 0 ) {}
+
+	void OnAttributeChange( const Rocket::Core::AttributeNameList& changed_attributes )
+	{
+		HudElement::OnAttributeChange( changed_attributes );
+		if ( changed_attributes.find( "src" ) != changed_attributes.end() )
+		{
+			Rocket::Core::String src = GetAttribute<Rocket::Core::String>( "src", "" );
+			Rocket::Core::String rml( va("<img class='zap' src='%s' />", src.CString() ) );
+			SetInnerRML( rml );
+		}
+	}
+
+	void DoOnUpdate()
+	{
+		const int weaponTime = cg.snap->ps.weaponTime;
+		const bool isSecondaryAttack =
+			weaponTime > LEVEL2_AREAZAP_TIME * 9 / 10; // HACK
+		constexpr int delayBetweenAttacks = 400; // Where is this one coming from?
+
+		if ( !charging && isSecondaryAttack )
+		{
+			// start regenerating now
+			t0 = cg.time;
+			charging = true;
+		}
+		else if ( cg.time > t0 + LEVEL2_AREAZAP_TIME + delayBetweenAttacks - 40 ) // Eww
+		{
+			charging = false;
+		}
+
+		Element *zap = GetFirstChild();
+		if (charging) {
+			const float opacity = GetSin() / 8.0f + ( 1.0f / 8.0f ); // in [0, 0.125]
+			zap->SetProperty( "opacity", va( "%f", opacity ) );
+		}
+		else
+		{
+			zap->SetProperty( "opacity", "1.0" );
+		}
+	}
+
+private:
+
+	float GetSin()
+	{
+		return sin( GetParam() );
+	}
+
+	float GetParam()
+	{
+		float timeElapsed = ( cg.time - t0 ) / 1000.0f; // in s
+		constexpr float offset = -M_PI_2; // start at minumum
+		return offset + pulsation * timeElapsed;
+	}
+
+	const float pulsation = 2.0f * M_PI * 1000 / (float)LEVEL2_AREAZAP_TIME;
+	int t0;
+	bool charging;
+};
+
 class BarbsHudElement : public HudElement
 {
 public:
@@ -3682,4 +3749,5 @@ void CG_Rocket_RegisterElements()
 	REGISTER_ELEMENT( "beacon_owner", BeaconOwnerElement )
 	REGISTER_ELEMENT( "predictedMineEfficiency", PredictedMineEfficiencyElement )
 	REGISTER_ELEMENT( "barbs", BarbsHudElement )
+	REGISTER_ELEMENT( "zap", ZapHudElement )
 }
