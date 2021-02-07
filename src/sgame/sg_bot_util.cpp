@@ -1399,7 +1399,7 @@ void BotClassMovement( gentity_t *self, bool inAttackRange )
 		case PCL_ZOMBIE_BASE:
 			if ( self->botMind->nav.directPathToGoal )
 			{
-				if ( self->client->time1000 % 300 == 0 )
+				if ( self->client->time10000 % 700 == 0 && random() > 0.7f )
 				{
 					BotJump( self );
 				}
