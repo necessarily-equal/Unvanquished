@@ -893,8 +893,7 @@ void ClientTimerActions( gentity_t *ent, int msec )
 		client->time100 -= 100;
 
 		// Update build timer
-		if ( weapon == WP_ABUILD || weapon == WP_ABUILD2 ||
-		     BG_InventoryContainsWeapon( WP_HBUILD, client->ps.stats ) )
+		if ( BG_InventoryContainsWeapon( WP_HBUILD, client->ps.stats ) )
 		{
 			if ( client->ps.stats[ STAT_MISC ] > 0 )
 			{
@@ -910,8 +909,8 @@ void ClientTimerActions( gentity_t *ent, int msec )
 		// Building related
 		switch ( weapon )
 		{
-			case WP_ABUILD:
-			case WP_ABUILD2:
+			//case WP_ABUILD:
+			//case WP_ABUILD2:
 			case WP_HBUILD:
 				buildable = (buildable_t) ( client->ps.stats[ STAT_BUILDABLE ] & SB_BUILDABLE_MASK );
 

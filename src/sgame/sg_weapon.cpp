@@ -1453,8 +1453,8 @@ void G_FireWeapon( gentity_t *self, weapon_t weapon, weaponMode_t weaponMode )
 		{
 			switch ( weapon )
 			{
-				case WP_ABUILD:
-				case WP_ABUILD2:
+				//case WP_ABUILD:
+				//case WP_ABUILD2:
 				case WP_HBUILD:
 					FireMarkDeconstruct( self );
 					break;
@@ -1468,8 +1468,8 @@ void G_FireWeapon( gentity_t *self, weapon_t weapon, weaponMode_t weaponMode )
 		{
 			switch ( weapon )
 			{
-				case WP_ABUILD:
-				case WP_ABUILD2:
+				//case WP_ABUILD:
+				//case WP_ABUILD2:
 				case WP_HBUILD:
 					DeconstructSelectTarget( self );
 					break;
@@ -1483,8 +1483,8 @@ void G_FireWeapon( gentity_t *self, weapon_t weapon, weaponMode_t weaponMode )
 		{
 			switch ( weapon )
 			{
-				case WP_ABUILD:
-				case WP_ABUILD2:
+				//case WP_ABUILD:
+				//case WP_ABUILD2:
 				case WP_HBUILD:
 					FireForceDeconstruct( self );
 					break;

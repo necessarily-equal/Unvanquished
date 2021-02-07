@@ -2652,11 +2652,11 @@ void CG_HandleFireWeapon( centity_t *cent, weaponMode_t weaponMode )
 		}
 	}
 
-	if ( ( weaponNum == WP_ABUILD || weaponNum == WP_ABUILD2 ) && weaponMode == WPM_SECONDARY
-	     && ( cg.snap->ps.stats[ STAT_BUILDABLE ] & SB_BUILDABLE_MASK ) > BA_NONE )
-	{
-		return; // no sound for canceling buildable placement
-	}
+	//if ( ( weaponNum == WP_ABUILD || weaponNum == WP_ABUILD2 ) && weaponMode == WPM_SECONDARY
+	//     && ( cg.snap->ps.stats[ STAT_BUILDABLE ] & SB_BUILDABLE_MASK ) > BA_NONE )
+	//{
+	//	return; // no sound for canceling buildable placement
+	//}
 
 	// play a sound
 	for ( c = 0; c < 4; c++ )
@@ -2869,8 +2869,8 @@ float CG_ChargeProgress()
 		min = LCANNON_CHARGE_TIME_MIN;
 		max = LCANNON_CHARGE_TIME_MAX;
 		break;
-	case WP_ABUILD:
-	case WP_ABUILD2:
+	//case WP_ABUILD:
+	//case WP_ABUILD2:
 	case WP_HBUILD:
 		min = BUILDER_MAX_SHORT_DECONSTRUCT_CHARGE;
 		max = BUILDER_LONG_DECONSTRUCT_CHARGE;

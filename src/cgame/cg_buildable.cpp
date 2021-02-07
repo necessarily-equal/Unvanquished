@@ -2052,8 +2052,8 @@ static bool CG_PlayerIsBuilder( buildable_t buildable )
 {
 	switch ( cg.predictedPlayerState.weapon )
 	{
-		case WP_ABUILD:
-		case WP_ABUILD2:
+		//case WP_ABUILD:
+		//case WP_ABUILD2:
 		case WP_HBUILD:
 			return BG_Buildable( buildable )->team ==
 			       BG_Weapon( cg.predictedPlayerState.weapon )->team;
@@ -2546,8 +2546,9 @@ void CG_Buildable( centity_t *cent )
 		if ( team == TEAM_HUMANS ) {
 			drawRange = BG_InventoryContainsWeapon( WP_HBUILD, cg.predictedPlayerState.stats );
 		} else if ( team == TEAM_ALIENS ) {
-			drawRange = cg.predictedPlayerState.weapon == WP_ABUILD ||
-			            cg.predictedPlayerState.weapon == WP_ABUILD2;
+//			drawRange = cg.predictedPlayerState.weapon == WP_ABUILD ||
+//			            cg.predictedPlayerState.weapon == WP_ABUILD2;
+			drawRange = false;
 		} else {
 			drawRange = (cg_buildableRangeMarkerMask.integer & (1 << BA_NONE)) != 0;
 		}

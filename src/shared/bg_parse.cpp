@@ -63,16 +63,6 @@ struct configVar_t
 //Definition of the config vars
 
 // Alien weapons
-
-int   ABUILDER_CLAW_DMG;
-float ABUILDER_CLAW_RANGE;
-float ABUILDER_CLAW_WIDTH;
-int   ABUILDER_BLOB_DMG;
-float ABUILDER_BLOB_SPEED;
-float ABUILDER_BLOB_SPEED_MOD;
-int   ABUILDER_BLOB_TIME;
-int		ABUILDER_BLOB_LOCK_TIME;
-
 int   ZOMBIE_BITE_DMG;
 float ZOMBIE_BITE_RANGE;
 float ZOMBIE_BITE_WIDTH;
@@ -144,15 +134,6 @@ static configVar_t bg_configVars[] =
 	{"u_medkit_startupSpeed", INTEGER, false, &MEDKIT_STARTUP_SPEED},
 	{"u_medkit_startupTime", INTEGER, false, &MEDKIT_STARTUP_TIME},
 
-	{"w_abuild_blobDmg", INTEGER, false, &ABUILDER_BLOB_DMG},
-	{"w_abuild_blobLockTime", INTEGER, false, &ABUILDER_BLOB_LOCK_TIME},
-	{"w_abuild_blobSlowTime", INTEGER, false, &ABUILDER_BLOB_TIME},
-	{"w_abuild_blobSpeed", FLOAT, false, &ABUILDER_BLOB_SPEED},
-	{"w_abuild_blobSpeedMod", FLOAT, false, &ABUILDER_BLOB_SPEED_MOD},
-	{"w_abuild_clawDmg", INTEGER, false, &ABUILDER_CLAW_DMG},
-	{"w_abuild_clawRange", FLOAT, false, &ABUILDER_CLAW_RANGE},
-	{"w_abuild_clawWidth", FLOAT, false, &ABUILDER_CLAW_WIDTH},
-
 	{"w_blaster_damage", INTEGER, false, &BLASTER_DMG },
 	{"w_blaster_size", INTEGER, false, &BLASTER_SIZE },
 	{"w_blaster_speed", INTEGER, false, &BLASTER_SPEED },
@@ -205,6 +186,11 @@ static configVar_t bg_configVars[] =
 	{"w_shotgun_pellets", INTEGER, false, &SHOTGUN_PELLETS },
 	{"w_shotgun_range", INTEGER, false, &SHOTGUN_RANGE },
 	{"w_shotgun_spread", INTEGER, false, &SHOTGUN_SPREAD },
+
+	{"w_zbase_biteDmg",    INTEGER, false, &ZOMBIE_BITE_DMG    },
+	{"w_zbase_biteRange",  FLOAT,   false, &ZOMBIE_BITE_RANGE  },
+	{"w_zbase_biteRepeat", INTEGER, false, &ZOMBIE_BITE_REPEAT },
+	{"w_zbase_biteWidth",  FLOAT,   false, &ZOMBIE_BITE_WIDTH  },
 };
 
 static const size_t bg_numConfigVars = ARRAY_LEN( bg_configVars );
@@ -608,18 +594,14 @@ void BG_ParseBuildableAttributeFile( const char *filename, buildableAttributes_t
 		{
 			PARSE(text, token);
 
-			if ( !Q_stricmp( token, "alien" ) )
-			{
-				ba->buildWeapon = (weapon_t) ( ( 1 << WP_ABUILD ) | ( 1 << WP_ABUILD2 ) );
-			}
-			else if ( !Q_stricmp( token, "human" ) )
+			if ( !Q_stricmp( token, "human" ) )
 			{
 				ba->buildWeapon = (weapon_t) ( 1 << WP_HBUILD );
 			}
-			else
-			{
-				Log::Warn( "unknown buildWeapon value '%s'", token );
-			}
+			//else
+			//{
+			//	Log::Warn( "unknown buildWeapon value '%s'", token );
+			//}
 
 			defined |= BUILDWEAPON;
 		}

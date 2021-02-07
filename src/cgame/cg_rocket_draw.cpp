@@ -239,8 +239,8 @@ public:
 			case WP_BLASTER:
 				return;
 
-			case WP_ABUILD:
-			case WP_ABUILD2:
+			//case WP_ABUILD:
+			//case WP_ABUILD2:
 			case WP_HBUILD:
 				if ( builder &&
 				     spentBudget  == cg.snap->ps.persistant[ PERS_SPENTBUDGET ] &&
@@ -334,8 +334,8 @@ public:
 		{
 			case WP_NONE:
 			case WP_BLASTER:
-			case WP_ABUILD:
-			case WP_ABUILD2:
+			//case WP_ABUILD:
+			//case WP_ABUILD2:
 			case WP_HBUILD:
 				if ( clips != -1 )
 				{

@@ -505,8 +505,6 @@ static const weaponData_t bg_weaponsData[] =
 	{ WP_HIVE,              "hive"      },
 	{ WP_ROCKETPOD,         "rocketpod" },
 	{ WP_MGTURRET,          "mgturret"  },
-	{ WP_ABUILD,            "abuild"    },
-	{ WP_ABUILD2,           "abuildupg" },
 	{ WP_HBUILD,            "ckit"      }
 };
 

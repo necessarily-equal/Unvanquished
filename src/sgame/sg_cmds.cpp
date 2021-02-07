@@ -2538,8 +2538,8 @@ void Cmd_Deconstruct_f( gentity_t *ent )
 	switch ( ent->client->ps.weapon )
 	{
 		case WP_HBUILD:
-		case WP_ABUILD:
-		case WP_ABUILD2:
+		//case WP_ABUILD:
+		//case WP_ABUILD2:
 			break;
 
 		default:

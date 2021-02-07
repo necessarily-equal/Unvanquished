@@ -3447,7 +3447,7 @@ static void PM_Weapon()
 		}
 	}
 
-	if ( pm->ps->weapon == WP_ABUILD2 || pm->ps->weapon == WP_HBUILD )
+	if ( pm->ps->weapon == WP_HBUILD )
 	{
 		HandleDeconstructButton();
 	}

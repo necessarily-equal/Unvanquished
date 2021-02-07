@@ -62,7 +62,7 @@ static float CG_Rocket_GetBuildTimerProgress()
 	weapon_t weapon = BG_GetPlayerWeapon( ps );
 
 	// Not building anything
-	if ( weapon != WP_HBUILD && weapon != WP_ABUILD && weapon != WP_ABUILD2 )
+	if ( weapon != WP_HBUILD )
 	{
 		return 0;
 	}
