@@ -275,6 +275,10 @@ static void CG_Obituary( entityState_t *ent )
 				message = G_( "%s%s ^*was in the wrong place" );
 				break;
 
+			case MOD_ZOMBIE_BITE:
+				message = G_( "%s%s ^*was devoured alive" );
+				break;
+
 			// Building explosions
 
 			case MOD_HSPAWN:
@@ -430,11 +434,6 @@ static void CG_Obituary( entityState_t *ent )
 				message = G_( "%s%s ^*was incinerated by %s%s^*'s firebomb" );
 				messageAssisted = G_( "%s%s ^*was incinerated by %s%s^*'s firebomb; %s%s^* assisted" );
 				messageSuicide = G_( "%s%s ^*was incinerated" );
-				break;
-
-			case MOD_ZOMBIE_BITE:
-				message = G_( "%s%s ^*was devoured alive" );
-				messageAssisted = G_( "%s%s ^* devoured alive" );
 				break;
 
 			default:
