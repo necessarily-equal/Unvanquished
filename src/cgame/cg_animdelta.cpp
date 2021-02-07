@@ -74,7 +74,8 @@ bool AnimDelta::LoadData(clientInfo_t* ci)
 	// special handling for human_(naked|light|medium)
 	if ( !Q_stricmp( ci->modelName, "human_naked"   ) ||
 		!Q_stricmp( ci->modelName, "human_light"   ) ||
-		!Q_stricmp( ci->modelName, "human_medium" ) )
+		!Q_stricmp( ci->modelName, "human_medium" ) ||
+		!Q_stricmp( ci->modelName, "zbase" ) )
 	{
 		Q_strncpyz( newModelName, "human_nobsuit_common", sizeof( newModelName ) );
 	}

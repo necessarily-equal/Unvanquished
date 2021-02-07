@@ -310,10 +310,11 @@ static bool CG_RegisterPlayerAnimation( clientInfo_t *ci, const char *modelName,
 	char filename[ MAX_QPATH ], newModelName[ MAX_QPATH ];
 	int  frameRate;
 
-	// special handling for human_(naked|light|medium)
+	// special handling for human_(naked|light|medium) and zombie
 	if ( !Q_stricmp( modelName, "human_naked"   ) ||
 	     !Q_stricmp( modelName, "human_light"   ) ||
-	     !Q_stricmp( modelName, "human_medium" ) )
+	     !Q_stricmp( modelName, "human_medium" ) ||
+	     !Q_stricmp( modelName, "zbase" ) )
 	{
 		Q_strncpyz( newModelName, "human_nobsuit_common", sizeof( newModelName ) );
 	}
