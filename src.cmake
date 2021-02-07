@@ -159,6 +159,7 @@ set(SGAMELIST
     ${GAMELOGIC_DIR}/sgame/components/AcidTubeComponent.cpp
     ${GAMELOGIC_DIR}/sgame/components/AlienBuildableComponent.cpp
     ${GAMELOGIC_DIR}/sgame/components/AlienClassComponent.cpp
+    ${GAMELOGIC_DIR}/sgame/components/ZombieClassComponent.cpp
     ${GAMELOGIC_DIR}/sgame/components/ArmorComponent.cpp
     ${GAMELOGIC_DIR}/sgame/components/ArmouryComponent.cpp
     ${GAMELOGIC_DIR}/sgame/components/BarricadeComponent.cpp

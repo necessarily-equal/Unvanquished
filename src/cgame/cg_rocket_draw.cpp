@@ -893,32 +893,6 @@ private:
 	int credits;
 };
 
-class EvosValueElement : public TextHudElement
-{
-public:
-	EvosValueElement( const Rocket::Core::String& tag ) :
-			TextHudElement( tag, ELEMENT_ALIENS ),
-			evos( -1 ) {}
-
-	void DoOnUpdate()
-	{
-		playerState_t *ps = &cg.snap->ps;
-		float value = ps->persistant[ PERS_CREDIT ];;
-
-		value /= ( float ) CREDITS_PER_EVO;
-
-		if ( evos != value )
-		{
-			evos = value;
-			// display it rounded down
-			SetText( va( "%1.1f", floorf(evos*10)/10 ) );
-		}
-	}
-
-private:
-	float evos;
-};
-
 class StaminaValueElement : public TextHudElement
 {
 public:
@@ -1001,33 +975,33 @@ private:
 	bool isNoAmmo;
 };
 
-class WallwalkElement : public HudElement
-{
-public:
-	WallwalkElement( const Rocket::Core::String& tag ) :
-			HudElement( tag, ELEMENT_ALIENS ),
-			isActive( false ) {}
-
-	void DoOnUpdate()
-	{
-		bool wallwalking = cg.snap->ps.stats[ STAT_STATE ] & SS_WALLCLIMBING;
-		if ( ( wallwalking && !isActive ) || ( !wallwalking && isActive ) )
-		{
-			SetActive( wallwalking );
-		}
-	}
-
-private:
-	void SetActive( bool active )
-	{
-		isActive = active;
-		SetClass( "active", active );
-		SetClass( "inactive", !active );
-
-	}
-
-	bool isActive;
-};
+//class WallwalkElement : public HudElement
+//{
+//public:
+//	WallwalkElement( const Rocket::Core::String& tag ) :
+//			HudElement( tag, ELEMENT_ALIENS ),
+//			isActive( false ) {}
+//
+//	void DoOnUpdate()
+//	{
+//		bool wallwalking = cg.snap->ps.stats[ STAT_STATE ] & SS_WALLCLIMBING;
+//		if ( ( wallwalking && !isActive ) || ( !wallwalking && isActive ) )
+//		{
+//			SetActive( wallwalking );
+//		}
+//	}
+//
+//private:
+//	void SetActive( bool active )
+//	{
+//		isActive = active;
+//		SetClass( "active", active );
+//		SetClass( "inactive", !active );
+//
+//	}
+//
+//	bool isActive;
+//};
 
 class UsableBuildableElement : public HudElement
 {
@@ -2229,123 +2203,6 @@ private:
 	int  lastDeltaEfficiencyPct;
 	int  lastDeltaBudget;
 	std::unordered_map<int, std::string> pluralSuffix;
-};
-
-class BarbsHudElement : public HudElement
-{
-public:
-	BarbsHudElement ( const Rocket::Core::String& tag ) :
-	HudElement ( tag, ELEMENT_ALIENS ),
-	numBarbs( 0 ),
-	maxBarbs( BG_Weapon( WP_ALEVEL3_UPG )->maxAmmo ),
-	regenerationInterval ( 0 ),
-	t0 ( 0 ),
-	offset ( 0 ) {}
-
-	void OnAttributeChange( const Rocket::Core::AttributeNameList& changed_attributes )
-	{
-		HudElement::OnAttributeChange( changed_attributes );
-		if ( changed_attributes.find( "src" ) != changed_attributes.end() )
-		{
-			if ( maxBarbs > 0 )
-			{
-				Rocket::Core::String src = GetAttribute<Rocket::Core::String>( "src", "" );
-				Rocket::Core::String base( va("<img class='barbs' src='%s' />", src.CString() ) );
-				Rocket::Core::String rml;
-
-				for ( int i = 0; i < maxBarbs; i++ )
-				{
-					rml += base;
-				}
-				SetInnerRML( rml );
-			}
-			else
-			{
-				SetInnerRML( "" );
-			}
-		}
-	}
-
-	void DoOnUpdate()
-	{
-		int newNumBarbs = cg.snap->ps.ammo;
-		int interval = BG_GetBarbRegenerationInterval( cg.snap->ps );
-
-		if ( newNumBarbs < maxBarbs )
-		{
-			// start regenerating barb now
-			if ( newNumBarbs > numBarbs || ( newNumBarbs < numBarbs && numBarbs == maxBarbs ) )
-			{
-				t0 = cg.time;
-				offset = -M_PI_2; // sin(-pi/2) is minimal
-			}
-			// change regeneration speed
-			else if ( interval != regenerationInterval )
-			{
-				float sinOld = GetSin();
-				float cosOld = GetCos();
-
-				// avoid sudden jumps in opacity
-				t0 = cg.time;
-				if ( cosOld >= 0.0 )
-				{
-					offset = asin( sinOld );
-				}
-				else
-				{
-					offset = M_PI - asin( sinOld );
-				}
-				regenerationInterval = interval;
-			}
-		}
-		numBarbs = newNumBarbs;
-
-		for ( int i = 0; i < GetNumChildren(); i++ )
-		{
-			Element *barb = GetChild(i);
-			if (i < numBarbs ) // draw existing barbs
-			{
-				barb->SetProperty( "opacity", "1.0" );
-			}
-			else if (i == numBarbs ) // draw regenerating barb
-			{
-				float opacity = GetSin() / 8.0f + ( 1.0f / 8.0f ); // in [0, 0.125]
-				barb->SetProperty( "opacity", va( "%f", opacity ) );
-			}
-			else
-			{
-				barb->SetProperty( "opacity", "0.0" );
-			}
-		}
-	}
-
-private:
-
-	float GetSin()
-	{
-		return sin( GetParam() );
-	}
-
-	float GetCos()
-	{
-		return cos( GetParam() );
-	}
-
-	float GetParam()
-	{
-		float timeElapsed = ( cg.time - t0 ) / 1000.0f; // in s
-		float frequency = (float)LEVEL3_BOUNCEBALL_REGEN_CREEP
-		                / (float)regenerationInterval; // in Hz
-		return offset + 2.0f * M_PI * frequency * timeElapsed;
-	}
-
-	int numBarbs;
-	int maxBarbs;
-	int regenerationInterval;
-
-	// t0 and offset are used to make sure that there are no sudden jumps in opacity.
-	int t0;
-	float offset;
 };
 
 void CG_Rocket_DrawPlayerHealth()
@@ -3660,10 +3517,8 @@ void CG_Rocket_RegisterElements()
 	REGISTER_ELEMENT( "crosshair", CrosshairHudElement )
 	REGISTER_ELEMENT( "speedometer", SpeedGraphElement )
 	REGISTER_ELEMENT( "credits", CreditsValueElement )
-	REGISTER_ELEMENT( "evos", EvosValueElement )
 	REGISTER_ELEMENT( "stamina", StaminaValueElement )
 	REGISTER_ELEMENT( "weapon_icon", WeaponIconElement )
-	REGISTER_ELEMENT( "wallwalk", WallwalkElement )
 	REGISTER_ELEMENT( "usable_buildable", UsableBuildableElement )
 	REGISTER_ELEMENT( "location", LocationElement )
 	REGISTER_ELEMENT( "timer", TimerElement )
@@ -3681,5 +3536,4 @@ void CG_Rocket_RegisterElements()
 	REGISTER_ELEMENT( "beacon_name", BeaconNameElement )
 	REGISTER_ELEMENT( "beacon_owner", BeaconOwnerElement )
 	REGISTER_ELEMENT( "predictedMineEfficiency", PredictedMineEfficiencyElement )
-	REGISTER_ELEMENT( "barbs", BarbsHudElement )
 }

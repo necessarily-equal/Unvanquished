@@ -839,53 +839,6 @@ static void CG_LightFlare( centity_t *cent )
 
 /*
 =========================
-CG_Lev2ZapChain
-=========================
-*/
-static void CG_Lev2ZapChain( centity_t *cent )
-{
-	int           i;
-	entityState_t *es;
-	centity_t     *source = nullptr, *target = nullptr;
-	int           entityNums[ LEVEL2_AREAZAP_MAX_TARGETS + 1 ];
-	int           count;
-
-	es = &cent->currentState;
-
-	count = BG_UnpackEntityNumbers( es, entityNums, LEVEL2_AREAZAP_MAX_TARGETS + 1 );
-
-	for ( i = 1; i < count; i++ )
-	{
-		if ( i == 1 )
-		{
-			// First entity is the attacker
-			source = &cg_entities[ entityNums[ 0 ] ];
-		}
-		else
-		{
-			// Subsequent zaps come from the first target
-			source = &cg_entities[ entityNums[ 1 ] ];
-		}
-
-		target = &cg_entities[ entityNums[ i ] ];
-
-		if ( !CG_IsTrailSystemValid( &cent->level2ZapTS[ i ] ) )
-		{
-			cent->level2ZapTS[ i ] = CG_SpawnNewTrailSystem( cgs.media.level2ZapTS );
-		}
-
-		if ( CG_IsTrailSystemValid( &cent->level2ZapTS[ i ] ) )
-		{
-			CG_SetAttachmentCent( &cent->level2ZapTS[ i ]->frontAttachment, source );
-			CG_SetAttachmentCent( &cent->level2ZapTS[ i ]->backAttachment, target );
-			CG_AttachToCent( &cent->level2ZapTS[ i ]->frontAttachment );
-			CG_AttachToCent( &cent->level2ZapTS[ i ]->backAttachment );
-		}
-	}
-}
-
-/*
-=========================
 CG_AdjustPositionForMover
 
 Also called by client movement prediction code
@@ -1110,16 +1063,6 @@ static void CG_CEntityPVSLeave( centity_t *cent )
 
 	switch ( es->eType )
 	{
-		case entityType_t::ET_LEV2_ZAP_CHAIN:
-			for ( i = 0; i <= LEVEL2_AREAZAP_MAX_TARGETS; i++ )
-			{
-				if ( CG_IsTrailSystemValid( &cent->level2ZapTS[ i ] ) )
-				{
-					CG_DestroyTrailSystem( &cent->level2ZapTS[ i ] );
-				}
-			}
-			break;
-
 		case entityType_t::ET_LIGHTFLARE:
 			trap_UnregisterVisTest( cent->lfs.hTest );
 			cent->lfs.hTest = 0;
@@ -1255,10 +1198,6 @@ static void CG_AddCEntity( centity_t *cent )
 
 		case entityType_t::ET_LIGHTFLARE:
 			CG_LightFlare( cent );
-			break;
-
-		case entityType_t::ET_LEV2_ZAP_CHAIN:
-			CG_Lev2ZapChain( cent );
 			break;
 	}
 }

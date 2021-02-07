@@ -213,136 +213,6 @@ static void CG_BuilderText( char *text, playerState_t *ps )
 
 /*
 ===============
-CG_AlienBuilderText
-===============
-*/
-static void CG_AlienBuilderText( char *text, playerState_t *ps )
-{
-	CG_BuilderText( text, ps );
-
-	if ( ( ps->stats[ STAT_BUILDABLE ] & SB_BUILDABLE_MASK ) == BA_NONE )
-	{
-		Q_strcat( text, MAX_TUTORIAL_TEXT,
-		          va( _( "Press %s to swipe\n" ),
-		              CG_KeyNameForCommand( "+attack2" ) ) );
-	}
-
-	if ( ps->stats[ STAT_CLASS ] == PCL_ALIEN_BUILDER0_UPG )
-	{
-		Q_strcat( text, MAX_TUTORIAL_TEXT,
-		          va( _( "Press %s to spit\n" ),
-		              CG_KeyNameForCommand( "+attack3" ) ) );
-
-		Q_strcat( text, MAX_TUTORIAL_TEXT,
-		          va( _( "Press %s to walk on walls\n" ),
-		              CG_KeyNameForCommand( "+movedown" ) ) );
-	}
-}
-
-/*
-===============
-CG_AlienLevel0Text
-===============
-*/
-static void CG_AlienLevel0Text( char *text, playerState_t *ps )
-{
-	Q_UNUSED(ps);
-
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          _( "Touch humans to damage them\n"
-	             "Aim at their heads to cause more damage\n" ) );
-
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Press %s to walk on walls\n" ),
-	              CG_KeyNameForCommand( "+movedown" ) ) );
-}
-
-/*
-===============
-CG_AlienLevel1Text
-===============
-*/
-static void CG_AlienLevel1Text( char *text )
-{
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Press %s to swipe\n" ),
-	              CG_KeyNameForCommand( "+attack" ) ) );
-
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Press %s to lunge\n" ),
-	              CG_KeyNameForCommand( "+attack2" ) ) );
-
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Press %s to walk on walls\n" ),
-	              CG_KeyNameForCommand( "+movedown" ) ) );
-}
-
-/*
-===============
-CG_AlienLevel2Text
-===============
-*/
-static void CG_AlienLevel2Text( char *text, playerState_t *ps )
-{
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Press %s to bite\n" ),
-	              CG_KeyNameForCommand( "+attack" ) ) );
-
-	if ( ps->stats[ STAT_CLASS ] == PCL_ALIEN_LEVEL2_UPG )
-	{
-		Q_strcat( text, MAX_TUTORIAL_TEXT,
-		          va( _( "Press %s to invoke an electrical attack\n" ),
-		              CG_KeyNameForCommand( "+attack2" ) ) );
-	}
-
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Hold down %s then touch a wall to wall jump\n" ),
-	              CG_KeyNameForCommand( "+moveup" ) ) );
-}
-
-/*
-===============
-CG_AlienLevel3Text
-===============
-*/
-static void CG_AlienLevel3Text( char *text, playerState_t *ps )
-{
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Press %s to bite\n" ),
-	              CG_KeyNameForCommand( "+attack" ) ) );
-
-	if ( ps->stats[ STAT_CLASS ] == PCL_ALIEN_LEVEL3_UPG )
-	{
-		Q_strcat( text, MAX_TUTORIAL_TEXT,
-		          va( _( "Press %s to launch a barb\n" ),
-		              CG_KeyNameForCommand( "+attack3" ) ) );
-	}
-
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Hold down and release %s to pounce\n" ),
-	              CG_KeyNameForCommand( "+attack2" ) ) );
-}
-
-/*
-===============
-CG_AlienLevel4Text
-===============
-*/
-static void CG_AlienLevel4Text( char *text, playerState_t *ps )
-{
-	Q_UNUSED(ps);
-
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Press %s to swipe\n" ),
-	              CG_KeyNameForCommand( "+attack" ) ) );
-
-	Q_strcat( text, MAX_TUTORIAL_TEXT,
-	          va( _( "Hold down %s while moving forwards to trample\n" ),
-	              CG_KeyNameForCommand( "+attack2" ) ) );
-}
-
-/*
-===============
 CG_HumanCkitText
 ===============
 */
@@ -606,32 +476,32 @@ const char *CG_TutorialText()
 		{
 			switch ( ps->stats[ STAT_CLASS ] )
 			{
-				case PCL_ALIEN_BUILDER0:
-				case PCL_ALIEN_BUILDER0_UPG:
-					CG_AlienBuilderText( text, ps );
-					break;
-
-				case PCL_ALIEN_LEVEL0:
-					CG_AlienLevel0Text( text, ps );
-					break;
-
-				case PCL_ALIEN_LEVEL1:
-					CG_AlienLevel1Text( text );
-					break;
-
-				case PCL_ALIEN_LEVEL2:
-				case PCL_ALIEN_LEVEL2_UPG:
-					CG_AlienLevel2Text( text, ps );
-					break;
-
-				case PCL_ALIEN_LEVEL3:
-				case PCL_ALIEN_LEVEL3_UPG:
-					CG_AlienLevel3Text( text, ps );
-					break;
-
-				case PCL_ALIEN_LEVEL4:
-					CG_AlienLevel4Text( text, ps );
-					break;
+				//case PCL_ALIEN_BUILDER0:
+				//case PCL_ALIEN_BUILDER0_UPG:
+				//	CG_AlienBuilderText( text, ps );
+				//	break;
+                                //
+				//case PCL_ALIEN_LEVEL0:
+				//	CG_AlienLevel0Text( text, ps );
+				//	break;
+                                //
+				//case PCL_ALIEN_LEVEL1:
+				//	CG_AlienLevel1Text( text );
+				//	break;
+                                //
+				//case PCL_ALIEN_LEVEL2:
+				//case PCL_ALIEN_LEVEL2_UPG:
+				//	CG_AlienLevel2Text( text, ps );
+				//	break;
+                                //
+				//case PCL_ALIEN_LEVEL3:
+				//case PCL_ALIEN_LEVEL3_UPG:
+				//	CG_AlienLevel3Text( text, ps );
+				//	break;
+                                //
+				//case PCL_ALIEN_LEVEL4:
+				//	CG_AlienLevel4Text( text, ps );
+				//	break;
 
 				case PCL_HUMAN_NAKED:
 				case PCL_HUMAN_LIGHT:

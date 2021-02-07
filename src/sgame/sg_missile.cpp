@@ -235,52 +235,6 @@ static int ImpactLockblock( gentity_t*, trace_t*, gentity_t *hitEnt )
 	return MIB_IMPACT;
 }
 
-static int ImpactSlowblob( gentity_t *ent, trace_t *trace, gentity_t *hitEnt )
-{
-	gentity_t *neighbor;
-	int       impactFlags = MIB_IMPACT;
-	gentity_t *attacker = &g_entities[ ent->r.ownerNum ];
-	vec3_t dir;
-
-	// put out fires on direct hit
-	hitEnt->entity->Extinguish( ABUILDER_BLOB_FIRE_IMMUNITY );
-
-	// put out fires in range
-	// TODO: Iterate over all ignitable entities only
-	neighbor = nullptr;
-	while ( ( neighbor = G_IterateEntitiesWithinRadius( neighbor, trace->endpos,
-							    ABUILDER_BLOB_FIRE_STOP_RANGE ) ) )
-	{
-		if ( neighbor != hitEnt )
-		{
-			neighbor->entity->Extinguish( ABUILDER_BLOB_FIRE_IMMUNITY );
-		}
-	}
-
-	if ( hitEnt->client && hitEnt->client->pers.team == TEAM_HUMANS )
-	{
-		if( !ABUILDER_BLOB_LOCK_TIME || hitEnt->client->pers.classSelection == PCL_HUMAN_BSUIT )
-		{
-			hitEnt->client->ps.stats[ STAT_STATE ] |= SS_SLOWLOCKED;
-			hitEnt->client->lastSlowTime = level.time;
-		}
-		else if ( attacker->client->pers.classSelection == PCL_ALIEN_BUILDER0_UPG )
-		{
-			hitEnt->client->ps.stats[ STAT_STATE ] |= SS_BLOBLOCKED;
-			hitEnt->client->lastLockTime = level.time - LOCKBLOB_LOCKTIME + ABUILDER_BLOB_LOCK_TIME;
-			AngleVectors( hitEnt->client->ps.viewangles, dir, nullptr, nullptr );
-			hitEnt->client->ps.stats[ STAT_VIEWLOCK ] = DirToByte( dir );
-		}
-
-	}
-	else if ( hitEnt->s.eType == entityType_t::ET_BUILDABLE && hitEnt->buildableTeam == TEAM_ALIENS )
-	{
-		impactFlags &= ~MIF_NO_DAMAGE;
-	}
-
-	return impactFlags;
-}
-
 static int ImpactHive( gentity_t *ent, trace_t*, gentity_t *hitEnt )
 {
 	if ( hitEnt->s.eType == entityType_t::ET_BUILDABLE && hitEnt->s.modelindex == BA_A_HIVE )
@@ -353,7 +307,6 @@ static void MissileImpact( gentity_t *ent, trace_t *trace )
 		case MIS_FLAMER:       impactFunc = ImpactFlamer;      break;
 		case MIS_FIREBOMB_SUB: impactFunc = ImpactFirebombSub; break;
 		case MIS_LOCKBLOB:     impactFunc = ImpactLockblock;   break;
-		case MIS_SLOWBLOB:     impactFunc = ImpactSlowblob;    break;
 		case MIS_HIVE:         impactFunc = ImpactHive;        break;
 		default:               impactFunc = DefaultImpactFunc; break;
 	}

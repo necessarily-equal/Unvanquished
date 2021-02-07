@@ -61,23 +61,7 @@ float BotGetBaseRushScore( gentity_t *ent )
 			}
 		case WP_HBUILD:
 			return 0.0f;
-		case WP_ABUILD:
-			return 0.0f;
-		case WP_ABUILD2:
-			return 0.0f;
-		case WP_ALEVEL0:
-			return 0.0f;
-		case WP_ALEVEL1:
-			return 0.2f;
-		case WP_ALEVEL2:
-			return 0.5f;
-		case WP_ALEVEL2_UPG:
-			return 0.7f;
-		case WP_ALEVEL3:
-			return 0.8f;
-		case WP_ALEVEL3_UPG:
-			return 0.9f;
-		case WP_ALEVEL4:
+		case WP_ZBASE:
 			return 1.0f;
 		default:
 			return 0.5f;
@@ -130,26 +114,8 @@ float BotGetEnemyPriority( gentity_t *self, gentity_t *ent )
 	{
 		switch ( ent->s.weapon )
 		{
-			case WP_ALEVEL0:
-				enemyScore = 0.1;
-				break;
-			case WP_ALEVEL1:
+			case WP_ZBASE:
 				enemyScore = 0.3;
-				break;
-			case WP_ALEVEL2:
-				enemyScore = 0.4;
-				break;
-			case WP_ALEVEL2_UPG:
-				enemyScore = 0.7;
-				break;
-			case WP_ALEVEL3:
-				enemyScore = 0.7;
-				break;
-			case WP_ALEVEL3_UPG:
-				enemyScore = 0.8;
-				break;
-			case WP_ALEVEL4:
-				enemyScore = 1.0;
 				break;
 			case WP_BLASTER:
 				enemyScore = 0.2;
@@ -671,12 +637,6 @@ gentity_t* BotFindClosestEnemy( gentity_t *self )
 			{
 				continue;
 			}
-
-			// dretches can only bite buildables in construction
-			if ( self->client->ps.stats[STAT_CLASS] == PCL_ALIEN_LEVEL0 && target->spawned )
-			{
-				continue;
-			}
 		}
 
 		//ignore neutrals
@@ -1006,55 +966,9 @@ bool BotTargetInAttackRange( gentity_t *self, botTarget_t target )
 	BotGetTargetPos( target, targetPos );
 	switch ( self->client->ps.weapon )
 	{
-		case WP_ABUILD:
-			range = ABUILDER_CLAW_RANGE;
+		case WP_ZBASE:
+			range = ZOMBIE_BITE_RANGE;
 			secondaryRange = 0;
-			width = height = ABUILDER_CLAW_WIDTH;
-			break;
-		case WP_ABUILD2:
-			range = ABUILDER_CLAW_RANGE;
-			secondaryRange = 300; //An arbitrary value for the blob launcher, has nothing to do with actual range
-			width = height = ABUILDER_CLAW_WIDTH;
-			break;
-		case WP_ALEVEL0:
-			range = LEVEL0_BITE_RANGE;
-			secondaryRange = 0;
-			break;
-		case WP_ALEVEL1:
-			range = LEVEL1_CLAW_RANGE;
-			secondaryRange = LEVEL1_POUNCE_DISTANCE;
-			width = height = LEVEL1_CLAW_WIDTH;
-			break;
-		case WP_ALEVEL2:
-			range = LEVEL2_CLAW_RANGE;
-			secondaryRange = 0;
-			width = height = LEVEL2_CLAW_WIDTH;
-			break;
-		case WP_ALEVEL2_UPG:
-			range = LEVEL2_CLAW_U_RANGE;
-			secondaryRange = LEVEL2_AREAZAP_RANGE;
-			width = height = LEVEL2_CLAW_WIDTH;
-			break;
-		case WP_ALEVEL3:
-			range = LEVEL3_CLAW_RANGE;
-			//need to check if we can pounce to the target
-			secondaryRange = LEVEL3_POUNCE_JUMP_MAG; //An arbitrary value for pounce, has nothing to do with actual range
-			width = height = LEVEL3_CLAW_WIDTH;
-			break;
-		case WP_ALEVEL3_UPG:
-			range = LEVEL3_CLAW_RANGE;
-			//we can pounce, or we have barbs
-			secondaryRange = LEVEL3_POUNCE_JUMP_MAG_UPG; //An arbitrary value for pounce and barbs, has nothing to do with actual range
-			if ( self->client->ps.ammo > 0 )
-			{
-				secondaryRange = 900;
-			}
-			width = height = LEVEL3_CLAW_WIDTH;
-			break;
-		case WP_ALEVEL4:
-			range = LEVEL4_CLAW_RANGE;
-			secondaryRange = 0; //Using 0 since tyrant rush is basically just movement, not a ranged attack
-			width = height = LEVEL4_CLAW_WIDTH;
 			break;
 		case WP_HBUILD:
 			range = 100;
@@ -1482,13 +1396,7 @@ void BotClassMovement( gentity_t *self, bool inAttackRange )
 
 	switch ( self->client->ps.stats[STAT_CLASS] )
 	{
-		case PCL_ALIEN_LEVEL0:
-			BotStrafeDodge( self );
-			break;
-		case PCL_ALIEN_LEVEL1:
-			break;
-		case PCL_ALIEN_LEVEL2:
-		case PCL_ALIEN_LEVEL2_UPG:
+		case PCL_ZOMBIE_BASE:
 			if ( self->botMind->nav.directPathToGoal )
 			{
 				if ( self->client->time1000 % 300 == 0 )
@@ -1496,23 +1404,6 @@ void BotClassMovement( gentity_t *self, bool inAttackRange )
 					BotJump( self );
 				}
 				BotStrafeDodge( self );
-			}
-			break;
-		case PCL_ALIEN_LEVEL3:
-			break;
-		case PCL_ALIEN_LEVEL3_UPG:
-			if ( BotGetTargetType( self->botMind->goal ) == entityType_t::ET_BUILDABLE && self->client->ps.ammo > 0
-				&& inAttackRange )
-			{
-				//dont move when sniping buildings
-				BotStandStill( self );
-			}
-			break;
-		case PCL_ALIEN_LEVEL4:
-			//use rush to approach faster
-			if ( !inAttackRange )
-			{
-				BotFireWeapon( WPM_SECONDARY, botCmdBuffer );
 			}
 			break;
 		default:
@@ -1572,22 +1463,6 @@ float CalcAimPitch( gentity_t *self, botTarget_t target, vec_t launchSpeed )
 	angle = RAD2DEG( angle );
 	return angle;
 }
-float CalcPounceAimPitch( gentity_t *self, botTarget_t target )
-{
-	vec_t speed = ( self->client->ps.stats[STAT_CLASS] == PCL_ALIEN_LEVEL3 ) ? LEVEL3_POUNCE_JUMP_MAG : LEVEL3_POUNCE_JUMP_MAG_UPG;
-	return CalcAimPitch( self, target, speed );
-
-	//in usrcmd angles, a positive angle is down, so multiply angle by -1
-	// botCmdBuffer->angles[PITCH] = ANGLE2SHORT(-angle);
-}
-float CalcBarbAimPitch( gentity_t *self, botTarget_t target )
-{
-	vec_t speed = LEVEL3_BOUNCEBALL_SPEED;
-	return CalcAimPitch( self, target, speed );
-
-	//in usrcmd angles, a positive angle is down, so multiply angle by -1
-	//botCmdBuffer->angles[PITCH] = ANGLE2SHORT(-angle);
-}
 
 void BotFireWeaponAI( gentity_t *self )
 {
@@ -1606,88 +1481,17 @@ void BotFireWeaponAI( gentity_t *self )
 	distance = Distance( muzzle, trace.endpos );
 	switch ( self->s.weapon )
 	{
-		case WP_ABUILD:
-			if ( distance <= ABUILDER_CLAW_RANGE )
-			{
-				BotFireWeapon( WPM_SECONDARY, botCmdBuffer );
-			}
-			else
-			{
-				usercmdPressButton( botCmdBuffer->buttons, BUTTON_GESTURE );    //make cute granger sounds to ward off the would be attackers
-			}
-			break;
-		case WP_ABUILD2:
-			if ( distance <= ABUILDER_CLAW_RANGE )
-			{
-				BotFireWeapon( WPM_SECONDARY, botCmdBuffer );    //swipe
-			}
-			else
-			{
-				BotFireWeapon( WPM_TERTIARY, botCmdBuffer );    //blob launcher
-			}
-			break;
-		case WP_ALEVEL0:
-			break; //auto hit
-		case WP_ALEVEL1:
-			if ( distance < LEVEL1_CLAW_RANGE )
+		case WP_ZBASE:
+			if ( distance < ZOMBIE_BITE_RANGE )
 			{
 				BotFireWeapon( WPM_PRIMARY, botCmdBuffer ); //mantis swipe
 			}
-			else if ( self->client->ps.weaponCharge == 0 )
-			{
-				BotMoveInDir( self, MOVE_FORWARD );
-				BotFireWeapon( WPM_SECONDARY, botCmdBuffer ); //mantis forward pounce
-			}
-			break;
-		case WP_ALEVEL2:
-			BotFireWeapon( WPM_PRIMARY, botCmdBuffer ); //mara swipe
-			break;
-		case WP_ALEVEL2_UPG:
-			if ( distance <= LEVEL2_CLAW_U_RANGE )
-			{
-				BotFireWeapon( WPM_PRIMARY, botCmdBuffer );    //mara swipe
-			}
-			else
-			{
-				BotFireWeapon( WPM_SECONDARY, botCmdBuffer );    //mara lightning
-			}
-			break;
-		case WP_ALEVEL3:
-			if ( distance > LEVEL3_CLAW_RANGE && self->client->ps.weaponCharge < LEVEL3_POUNCE_TIME )
-			{
-				botCmdBuffer->angles[PITCH] = ANGLE2SHORT( -CalcPounceAimPitch( self, self->botMind->goal ) ); //compute and apply correct aim pitch to hit target
-				BotFireWeapon( WPM_SECONDARY, botCmdBuffer ); //goon pounce
-			}
-			else
-			{
-				BotFireWeapon( WPM_PRIMARY, botCmdBuffer );    //goon chomp
-			}
-			break;
-		case WP_ALEVEL3_UPG:
-			if ( self->client->ps.ammo > 0 && distance > LEVEL3_CLAW_UPG_RANGE )
-			{
-				botCmdBuffer->angles[PITCH] = ANGLE2SHORT( -CalcBarbAimPitch( self, self->botMind->goal ) ); //compute and apply correct aim pitch to hit target
-				BotFireWeapon( WPM_TERTIARY, botCmdBuffer ); //goon barb
-			}
-			else if ( distance > LEVEL3_CLAW_UPG_RANGE && self->client->ps.weaponCharge < LEVEL3_POUNCE_TIME_UPG )
-			{
-				botCmdBuffer->angles[PITCH] = ANGLE2SHORT( -CalcPounceAimPitch( self, self->botMind->goal ) ); //compute and apply correct aim pitch to hit target
-				BotFireWeapon( WPM_SECONDARY, botCmdBuffer ); //goon pounce
-			}
-			else
-			{
-				BotFireWeapon( WPM_PRIMARY, botCmdBuffer );    //goon chomp
-			}
-			break;
-		case WP_ALEVEL4:
-			if ( distance > LEVEL4_CLAW_RANGE && self->client->ps.weaponCharge < LEVEL4_TRAMPLE_CHARGE_MAX )
-			{
-				BotFireWeapon( WPM_SECONDARY, botCmdBuffer );    //rant charge
-			}
-			else
-			{
-				BotFireWeapon( WPM_PRIMARY, botCmdBuffer );    //rant swipe
-			}
+			//ZFIXME: run
+			//else if ( self->client->ps.weaponCharge == 0 )
+			//{
+			//	BotMoveInDir( self, MOVE_FORWARD );
+			//	BotFireWeapon( WPM_SECONDARY, botCmdBuffer ); //zombie run
+			//}
 			break;
 		case WP_LUCIFER_CANNON:
 			if ( self->client->ps.weaponCharge < LCANNON_CHARGE_TIME_MAX * Com_Clamp( 0.5, 1, random() ) )
@@ -1698,92 +1502,6 @@ void BotFireWeaponAI( gentity_t *self )
 		default:
 			BotFireWeapon( WPM_PRIMARY, botCmdBuffer );
 	}
-}
-
-bool BotEvolveToClass( gentity_t *ent, class_t newClass )
-{
-	int clientNum;
-	int i;
-	vec3_t infestOrigin;
-	class_t currentClass = ent->client->pers.classSelection;
-	evolveInfo_t evolveInfo;
-	int entityList[ MAX_GENTITIES ];
-	vec3_t range = { AS_OVER_RT3, AS_OVER_RT3, AS_OVER_RT3 };
-	vec3_t mins, maxs;
-	int num;
-	gentity_t *other;
-
-	if ( Entities::IsDead( ent ) )
-	{
-		return false;
-	}
-
-	clientNum = ent->client - level.clients;
-
-	//if we are not currently spectating, we are attempting evolution
-	if ( ent->client->pers.classSelection != PCL_NONE )
-	{
-		if ( ( ent->client->ps.stats[ STAT_STATE ] & SS_WALLCLIMBING ) )
-		{
-			ent->client->pers.cmd.upmove = 0;
-		}
-
-		//check there are no humans nearby
-		VectorAdd( ent->client->ps.origin, range, maxs );
-		VectorSubtract( ent->client->ps.origin, range, mins );
-
-		num = trap_EntitiesInBox( mins, maxs, entityList, MAX_GENTITIES );
-		for ( i = 0; i < num; i++ )
-		{
-			other = &g_entities[ entityList[ i ] ];
-
-			if ( ( other->client && other->client->pers.team == TEAM_HUMANS ) ||
-				( other->s.eType == entityType_t::ET_BUILDABLE && other->buildableTeam == TEAM_HUMANS ) )
-			{
-				return false;
-			}
-		}
-
-		if ( !G_ActiveOvermind() )
-		{
-			return false;
-		}
-
-		evolveInfo = BG_ClassEvolveInfoFromTo( currentClass, newClass );
-
-		if ( G_RoomForClassChange( ent, newClass, infestOrigin ) )
-		{
-			//...check we can evolve to that class
-			if ( evolveInfo.classIsUnlocked && evolveInfo.evolveCost > 0 /* no devolving */ &&
-					ent->client->ps.persistant[ PERS_CREDIT ] >= evolveInfo.evolveCost )
-			{
-				ent->client->pers.evolveHealthFraction =
-					Math::Clamp( Entities::HealthFraction(ent), 0.0f, 1.0f );
-
-				//remove credit
-				G_AddCreditToClient( ent->client, -( short )evolveInfo.evolveCost, true );
-				ent->client->pers.classSelection = newClass;
-				BotSetNavmesh( ent, newClass );
-				ClientUserinfoChanged( clientNum, false );
-				VectorCopy( infestOrigin, ent->s.pos.trBase );
-				ClientSpawn( ent, ent, ent->s.pos.trBase, ent->s.apos.trBase );
-
-				//trap_SendServerCommand( -1, va( "print \"evolved to %s\n\"", classname) );
-
-				return true;
-			}
-			else
-				//trap_SendServerCommand( -1, va( "print \"Not enough evos to evolve to %s\n\"", classname) );
-			{
-				return false;
-			}
-		}
-		else
-		{
-			return false;
-		}
-	}
-	return false;
 }
 
 //Cmd_Buy_f ripoff, weapon version
@@ -2091,8 +1809,7 @@ bool BotEnemyIsValid( gentity_t *self, gentity_t *enemy )
 	}
 
 	//ignore buildings if we cant attack them
-	if ( enemy->s.eType == entityType_t::ET_BUILDABLE && ( !g_bot_attackStruct.integer ||
-	                                         self->client->ps.stats[STAT_CLASS] == PCL_ALIEN_LEVEL0 ) )
+	if ( enemy->s.eType == entityType_t::ET_BUILDABLE && !g_bot_attackStruct.integer )
 	{
 		return false;
 	}

@@ -782,18 +782,4 @@ struct commands_s
 	void      ( *cmdHandler )( gentity_t *ent );
 };
 
-struct zap_s
-{
-	bool  used;
-
-	gentity_t *creator;
-	gentity_t *targets[ LEVEL2_AREAZAP_MAX_TARGETS ];
-	int       numTargets;
-	float     distances[ LEVEL2_AREAZAP_MAX_TARGETS ];
-
-	int       timeToLive;
-
-	gentity_t *effectChannel;
-};
-
 #endif // SG_STRUCT_H_

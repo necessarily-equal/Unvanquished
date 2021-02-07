@@ -136,6 +136,16 @@ components:
         requires:
             Client:
 
+    ZombieClass:
+        requires:
+            Client:
+            Team:
+                team: TEAM_ALIENS
+            Armor:
+            Knockback:
+            Health:
+
+
     AlienClass:
         requires:
             Client:
@@ -363,41 +373,13 @@ entities:
     # Alien Classes |
     #---------------+
 
-    Dretch:
+    BaseZombie:
         components:
-            AlienClass:
+            ZombieClass:
 
-    Mantis:
-        components:
-            AlienClass:
-
-    Marauder:
-        components:
-            AlienClass:
-
-    AdvMarauder:
-        components:
-            AlienClass:
-
-    Dragoon:
-        components:
-            AlienClass:
-
-    AdvDragoon:
-        components:
-            AlienClass:
-
-    Tyrant:
-        components:
-            AlienClass:
-
-    Granger:
-        components:
-            AlienClass:
-
-    AdvGranger:
-        components:
-            AlienClass:
+#    ZombiePlayer:
+#        components:
+#            ZombieClass:
 
     #---------------+
     # Human Classes |

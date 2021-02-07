@@ -498,9 +498,9 @@ void G_BotSpectatorThink( gentity_t *self )
 		}
 		else if ( teamnum == TEAM_ALIENS )
 		{
-			self->client->pers.classSelection = PCL_ALIEN_LEVEL0;
-			self->client->ps.stats[STAT_CLASS] = PCL_ALIEN_LEVEL0;
-			BotSetNavmesh( self, PCL_ALIEN_LEVEL0 );
+			self->client->pers.classSelection = PCL_ZOMBIE_BASE;
+			self->client->ps.stats[STAT_CLASS] = PCL_ZOMBIE_BASE;
+			BotSetNavmesh( self, PCL_HUMAN_NAKED );
 		}
 
 		G_PushSpawnQueue( &level.team[ teamnum ].spawnQueue, clientNum );

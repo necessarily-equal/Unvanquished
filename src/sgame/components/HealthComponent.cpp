@@ -78,32 +78,6 @@ Util::optional<Vec3> direction, int flags, meansOfDeath_t meansOfDeath) {
 		if (entity.oldEnt != source && G_OnSameTeam(entity.oldEnt, source)) {
 			// Check if friendly fire has been disabled.
 			if (!g_friendlyFire.integer) return;
-
-			// Never do friendly damage on movement attacks.
-			switch (meansOfDeath) {
-				case MOD_LEVEL3_POUNCE:
-				case MOD_LEVEL4_TRAMPLE:
-					return;
-
-				default:
-					break;
-			}
-
-			// If dretchpunt is enabled and this is a dretch, do dretchpunt instead of damage.
-			// TODO: Add a message for pushing.
-			if (g_dretchPunt.integer && client && client->ps.stats[STAT_CLASS] == PCL_ALIEN_LEVEL0)
-			{
-				vec3_t dir, push;
-
-				VectorSubtract(entity.oldEnt->r.currentOrigin, source->r.currentOrigin, dir);
-				VectorNormalizeFast(dir);
-				VectorScale(dir, (amount * 10.0f), push);
-				push[ 2 ] = 64.0f;
-
-				VectorAdd( client->ps.velocity, push, client->ps.velocity );
-
-				return;
-			}
 		}
 
 		// Check for protection from friendly buildable damage. Never protect from building actions.
@@ -154,7 +128,6 @@ Util::optional<Vec3> direction, int flags, meansOfDeath_t meansOfDeath) {
 		    client->pers.team == TEAM_HUMANS && client->poisonImmunityTime < level.time) {
 			switch (meansOfDeath) {
 				case MOD_POISON:
-				case MOD_LEVEL2_ZAP:
 					break;
 
 				default:

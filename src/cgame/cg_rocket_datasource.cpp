@@ -1840,17 +1840,7 @@ void CG_Rocket_BuildAlienSpawnList( const char *table )
 		Rocket_DSClearTable( "alienSpawnClass", "default" );
 
 	{
-		AddAlienSpawnClass( PCL_ALIEN_LEVEL0 );
-
-		if ( BG_ClassUnlocked( PCL_ALIEN_BUILDER0_UPG ) )
-		{
-			AddAlienSpawnClass( PCL_ALIEN_BUILDER0_UPG );
-		}
-
-		else
-		{
-			AddAlienSpawnClass( PCL_ALIEN_BUILDER0 );
-		}
+		AddAlienSpawnClass( PCL_ZOMBIE_BASE ); //ZFIXME: ZOMBIE_PLAYER
 	}
 }
 
@@ -1871,11 +1861,7 @@ void CG_Rocket_ExecAlienSpawnList( const char* )
 	switch ( rocketInfo.data.selectedAlienSpawnClass )
 	{
 		case 0:
-			_class = "level0";
-			break;
-
-		case 1:
-			_class = BG_ClassUnlocked( PCL_ALIEN_BUILDER0_UPG ) ? "builderupg" : "builder";
+			_class = "zbase"; //ZFIXME: zplayer?
 			break;
 	}
 

@@ -56,7 +56,6 @@ extern  vmCvar_t g_showHelpOnConnection;
 extern  vmCvar_t g_timelimit;
 extern  vmCvar_t g_friendlyFire;
 extern  vmCvar_t g_friendlyBuildableFire;
-extern  vmCvar_t g_dretchPunt;
 extern  vmCvar_t g_password;
 extern  vmCvar_t g_needpass;
 extern  vmCvar_t g_gravity;

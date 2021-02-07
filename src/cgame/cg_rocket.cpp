@@ -461,15 +461,14 @@ void CG_Rocket_LoadHuds()
 			continue;
 		}
 
-		if ( !Q_stricmp( token, "alien.hudgroup" ) )
+		if ( !Q_stricmp( token, "zombie.hudgroup" ) )
 		{
-			for ( i = WP_ALEVEL0; i <= WP_ALEVEL4; ++i )
-			{
-				Rocket_ClearHud( i );
-			}
+			//for ( i = WP_ALEVEL0; i <= WP_ALEVEL4; ++i )
+			//{
+			//	Rocket_ClearHud( i );
+			//}
 
-			Rocket_ClearHud( WP_ABUILD );
-			Rocket_ClearHud( WP_ABUILD2 );
+			//Rocket_ClearHud( WP_ZBASE );
 
 			while ( 1 )
 			{
@@ -490,13 +489,13 @@ void CG_Rocket_LoadHuds()
 					break;
 				}
 
-				for ( i = WP_ALEVEL0; i <= WP_ALEVEL4; ++i )
-				{
-					Rocket_AddUnitToHud( i, token );
-				}
+				//for ( i = WP_ALEVEL0; i <= WP_ALEVEL4; ++i )
+				//{
+				//	Rocket_AddUnitToHud( i, token );
+				//}
 
-				Rocket_AddUnitToHud( WP_ABUILD, token );
-				Rocket_AddUnitToHud( WP_ABUILD2, token );
+				//Rocket_AddUnitToHud( WP_ABUILD, token );
+				//Rocket_AddUnitToHud( WP_ABUILD2, token );
 			}
 
 			continue;

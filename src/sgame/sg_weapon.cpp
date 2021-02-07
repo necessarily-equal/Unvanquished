@@ -495,20 +495,6 @@ static gentity_t *FireMelee( gentity_t *self, float range, float width, float he
 	return traceEnt;
 }
 
-static void FireLevel1Melee( gentity_t *self )
-{
-	gentity_t *target;
-
-	target = FireMelee( self, LEVEL1_CLAW_RANGE, LEVEL1_CLAW_WIDTH, LEVEL1_CLAW_WIDTH,
-	                    LEVEL1_CLAW_DMG, MOD_LEVEL1_CLAW );
-
-	if ( target && target->client )
-	{
-		target->client->ps.stats[ STAT_STATE2 ] |= SS2_LEVEL1SLOW;
-		target->client->lastLevel1SlowTime = level.time;
-	}
-}
-
 /*
 ======================================================================
 
@@ -1114,24 +1100,6 @@ void G_CheckCkitRepair( gentity_t *self )
 	}
 }
 
-static void CancelBuild( gentity_t *self )
-{
-	// Cancel ghost buildable
-	if ( self->client->ps.stats[ STAT_BUILDABLE ] != BA_NONE )
-	{
-		self->client->ps.stats[ STAT_BUILDABLE ] = BA_NONE;
-		self->client->ps.stats[ STAT_PREDICTION ] = 0;
-		return;
-	}
-
-	if ( self->client->ps.weapon == WP_ABUILD ||
-	     self->client->ps.weapon == WP_ABUILD2 )
-	{
-		FireMelee( self, ABUILDER_CLAW_RANGE, ABUILDER_CLAW_WIDTH,
-		             ABUILDER_CLAW_WIDTH, ABUILDER_CLAW_DMG, MOD_ABUILDER_CLAW );
-	}
-}
-
 // do the same thing as /deconstruct
 static void FireMarkDeconstruct( gentity_t *self )
 {
@@ -1245,410 +1213,6 @@ static void FireBuild( gentity_t *self, dynMenu_t menu )
 	}
 }
 
-static void FireSlowblob( gentity_t *self )
-{
-	G_SpawnMissile( MIS_SLOWBLOB, self, muzzle, forward, nullptr, G_ExplodeMissile, level.time + 15000 );
-}
-
-/*
-======================================================================
-
-LEVEL0
-
-======================================================================
-*/
-
-bool G_CheckVenomAttack( gentity_t *self )
-{
-	trace_t   tr;
-	gentity_t *traceEnt;
-
-	if ( self->client->ps.weaponTime )
-	{
-		return false;
-	}
-
-	// Calculate muzzle point
-	AngleVectors( self->client->ps.viewangles, forward, right, up );
-	G_CalcMuzzlePoint( self, forward, right, up, muzzle );
-
-	G_WideTrace( &tr, self, LEVEL0_BITE_RANGE, LEVEL0_BITE_WIDTH, LEVEL0_BITE_WIDTH, &traceEnt );
-
-	if ( !Entities::IsAlive( traceEnt ) || G_OnSameTeam( self, traceEnt ) )
-	{
-		return false;
-	}
-
-	// only allow bites to work against buildables in construction and turrets and rocket pods.
-	if ( traceEnt->s.eType == entityType_t::ET_BUILDABLE && traceEnt->spawned )
-	{
-		switch ( traceEnt->s.modelindex )
-		{
-			case BA_H_MGTURRET:
-			case BA_H_ROCKETPOD:
-				break;
-			default:
-				return false;
-		}
-	}
-
-	traceEnt->entity->Damage((float)LEVEL0_BITE_DMG, self, Vec3::Load(tr.endpos),
-	                         Vec3::Load(forward), 0, (meansOfDeath_t)MOD_LEVEL0_BITE);
-
-	SendMeleeHitEvent( self, traceEnt, &tr );
-
-	self->client->ps.weaponTime += LEVEL0_BITE_REPEAT;
-
-	return true;
-}
-
-/*
-======================================================================
-
-LEVEL2
-
-======================================================================
-*/
-#define MAX_ZAPS MAX_CLIENTS
-
-static zap_t zaps[ MAX_ZAPS ];
-
-static void FindZapChainTargets( zap_t *zap )
-{
-	gentity_t *ent = zap->targets[ 0 ]; // the source
-	int       entityList[ MAX_GENTITIES ];
-	vec3_t    range;
-	vec3_t    mins, maxs;
-	int       i, num;
-	gentity_t *enemy;
-	trace_t   tr;
-	float     distance;
-
-	VectorSet(range, LEVEL2_AREAZAP_CHAIN_RANGE, LEVEL2_AREAZAP_CHAIN_RANGE, LEVEL2_AREAZAP_CHAIN_RANGE);
-
-	VectorAdd( ent->s.origin, range, maxs );
-	VectorSubtract( ent->s.origin, range, mins );
-
-	num = trap_EntitiesInBox( mins, maxs, entityList, MAX_GENTITIES );
-
-	for ( i = 0; i < num; i++ )
-	{
-		enemy = &g_entities[ entityList[ i ] ];
-
-		// don't chain to self; noclippers can be listed, don't chain to them either
-		if ( enemy == ent || ( enemy->client && enemy->client->noclip ) )
-		{
-			continue;
-		}
-
-		distance = Distance( ent->s.origin, enemy->s.origin );
-
-		if ( ( ( enemy->client &&
-		         enemy->client->pers.team == TEAM_HUMANS ) ||
-		       ( enemy->s.eType == entityType_t::ET_BUILDABLE &&
-		         BG_Buildable( enemy->s.modelindex )->team == TEAM_HUMANS ) ) &&
-		     Entities::IsAlive( enemy ) &&
-		     distance <= LEVEL2_AREAZAP_CHAIN_RANGE )
-		{
-			// world-LOS check: trace against the world, ignoring other BODY entities
-			trap_Trace( &tr, ent->s.origin, nullptr, nullptr,
-			            enemy->s.origin, ent->s.number, CONTENTS_SOLID, 0 );
-
-			if ( tr.entityNum == ENTITYNUM_NONE )
-			{
-				zap->targets[ zap->numTargets ] = enemy;
-				zap->distances[ zap->numTargets ] = distance;
-
-				if ( ++zap->numTargets >= LEVEL2_AREAZAP_MAX_TARGETS )
-				{
-					return;
-				}
-			}
-		}
-	}
-}
-
-static void UpdateZapEffect( zap_t *zap )
-{
-	int i;
-	int entityNums[ LEVEL2_AREAZAP_MAX_TARGETS + 1 ];
-
-	entityNums[ 0 ] = zap->creator->s.number;
-
-	ASSERT_LE(zap->numTargets, LEVEL2_AREAZAP_MAX_TARGETS);
-
-	for ( i = 0; i < zap->numTargets; i++ )
-	{
-		entityNums[ i + 1 ] = zap->targets[ i ]->s.number;
-	}
-
-	BG_PackEntityNumbers( &zap->effectChannel->s,
-	                      entityNums, zap->numTargets + 1 );
-
-
-	G_SetOrigin( zap->effectChannel, muzzle );
-	trap_LinkEntity( zap->effectChannel );
-}
-
-static void CreateNewZap( gentity_t *creator, gentity_t *target )
-{
-	int   i;
-	zap_t *zap;
-
-	for ( i = 0; i < MAX_ZAPS; i++ )
-	{
-		zap = &zaps[ i ];
-
-		if ( zap->used )
-		{
-			continue;
-		}
-
-		zap->used = true;
-		zap->timeToLive = LEVEL2_AREAZAP_TIME;
-
-		zap->creator = creator;
-		zap->targets[ 0 ] = target;
-		zap->numTargets = 1;
-
-		// Zap chains only originate from alive entities.
-		if (target->entity->Damage((float)LEVEL2_AREAZAP_DMG, creator, Vec3::Load(target->s.origin),
-		                           Vec3::Load(forward), DAMAGE_NO_LOCDAMAGE, MOD_LEVEL2_ZAP)) {
-			FindZapChainTargets( zap );
-
-			for ( i = 1; i < zap->numTargets; i++ )
-			{
-				float damage = LEVEL2_AREAZAP_DMG * ( 1 - powf( ( zap->distances[ i ] /
-				               LEVEL2_AREAZAP_CHAIN_RANGE ), LEVEL2_AREAZAP_CHAIN_FALLOFF ) ) + 1;
-
-				target->entity->Damage(damage, zap->creator, Vec3::Load(target->s.origin),
-				                       Vec3::Load(forward), DAMAGE_NO_LOCDAMAGE, MOD_LEVEL2_ZAP);
-			}
-		}
-
-		zap->effectChannel = G_NewEntity();
-		zap->effectChannel->s.eType = entityType_t::ET_LEV2_ZAP_CHAIN;
-		zap->effectChannel->classname = "lev2zapchain";
-		UpdateZapEffect( zap );
-
-		return;
-	}
-}
-
-void G_UpdateZaps( int msec )
-{
-	int   i, j;
-	zap_t *zap;
-
-	for ( i = 0; i < MAX_ZAPS; i++ )
-	{
-		zap = &zaps[ i ];
-
-		if ( !zap->used )
-		{
-			continue;
-		}
-
-		zap->timeToLive -= msec;
-
-		// first, the disappearance of players is handled immediately in G_ClearPlayerZapEffects()
-
-		// the deconstruction or gibbing of a directly targeted buildable destroys the whole zap effect
-		if ( zap->timeToLive <= 0 || !zap->targets[ 0 ]->inuse )
-		{
-			G_FreeEntity( zap->effectChannel );
-			zap->used = false;
-			continue;
-		}
-
-		// the deconstruction or gibbing of chained buildables destroy the appropriate beams
-		for ( j = 1; j < zap->numTargets; j++ )
-		{
-			if ( !zap->targets[ j ]->inuse )
-			{
-				zap->targets[ j-- ] = zap->targets[ --zap->numTargets ];
-			}
-		}
-
-		UpdateZapEffect( zap );
-	}
-}
-
-/*
-===============
-Called from G_LeaveTeam() and TeleportPlayer().
-===============
-*/
-void G_ClearPlayerZapEffects( gentity_t *player )
-{
-	int   i, j;
-	zap_t *zap;
-
-	for ( i = 0; i < MAX_ZAPS; i++ )
-	{
-		zap = &zaps[ i ];
-
-		if ( !zap->used )
-		{
-			continue;
-		}
-
-		// the disappearance of the creator or the first target destroys the whole zap effect
-		if ( zap->creator == player || zap->targets[ 0 ] == player )
-		{
-			G_FreeEntity( zap->effectChannel );
-			zap->used = false;
-			continue;
-		}
-
-		// the disappearance of chained players destroy the appropriate beams
-		for ( j = 1; j < zap->numTargets; j++ )
-		{
-			if ( zap->targets[ j ] == player )
-			{
-				zap->targets[ j-- ] = zap->targets[ --zap->numTargets ];
-			}
-		}
-	}
-}
-
-static void FireAreaZap( gentity_t *ent )
-{
-	trace_t   tr;
-	gentity_t *traceEnt;
-
-	G_WideTrace( &tr, ent, LEVEL2_AREAZAP_RANGE, LEVEL2_AREAZAP_WIDTH, LEVEL2_AREAZAP_WIDTH, &traceEnt );
-
-	if ( traceEnt == nullptr )
-	{
-		return;
-	}
-
-	if ( ( traceEnt->client && traceEnt->client->pers.team == TEAM_HUMANS ) ||
-	     ( traceEnt->s.eType == entityType_t::ET_BUILDABLE &&
-	       BG_Buildable( traceEnt->s.modelindex )->team == TEAM_HUMANS ) )
-	{
-		CreateNewZap( ent, traceEnt );
-	}
-}
-
-/*
-======================================================================
-
-LEVEL3
-
-======================================================================
-*/
-
-bool G_CheckPounceAttack( gentity_t *self )
-{
-	trace_t   tr;
-	gentity_t *traceEnt;
-	int       damage, timeMax, pounceRange, payload;
-
-	if ( self->client->pmext.pouncePayload <= 0 )
-	{
-		return false;
-	}
-
-	// In case the goon lands on his target, he gets one shot after landing
-	payload = self->client->pmext.pouncePayload;
-
-	if ( !( self->client->ps.pm_flags & PMF_CHARGE ) )
-	{
-		self->client->pmext.pouncePayload = 0;
-	}
-
-	// Calculate muzzle point
-	AngleVectors( self->client->ps.viewangles, forward, right, up );
-	G_CalcMuzzlePoint( self, forward, right, up, muzzle );
-
-	// Trace from muzzle to see what we hit
-	pounceRange = self->client->ps.weapon == WP_ALEVEL3 ? LEVEL3_POUNCE_RANGE :
-	              LEVEL3_POUNCE_UPG_RANGE;
-	G_WideTrace( &tr, self, pounceRange, LEVEL3_POUNCE_WIDTH,
-	             LEVEL3_POUNCE_WIDTH, &traceEnt );
-
-	if ( !Entities::IsAlive( traceEnt ) )
-	{
-		return false;
-	}
-
-	timeMax = self->client->ps.weapon == WP_ALEVEL3 ? LEVEL3_POUNCE_TIME : LEVEL3_POUNCE_TIME_UPG;
-	damage  = payload * LEVEL3_POUNCE_DMG / timeMax;
-
-	self->client->pmext.pouncePayload = 0;
-
-	traceEnt->entity->Damage((float)damage, self, Vec3::Load(tr.endpos), Vec3::Load(forward),
-	                         DAMAGE_NO_LOCDAMAGE, MOD_LEVEL3_POUNCE);
-
-	SendMeleeHitEvent( self, traceEnt, &tr );
-
-	return true;
-}
-
-static void FireBounceball( gentity_t *self )
-{
-	G_SpawnMissile( MIS_BOUNCEBALL, self, muzzle, forward, nullptr, G_ExplodeMissile, level.time + 3000 );
-}
-
-/*
-======================================================================
-
-LEVEL4
-
-======================================================================
-*/
-
-void G_ChargeAttack( gentity_t *self, gentity_t *victim )
-{
-	int    damage;
-	int    i;
-	vec3_t forward;
-
-	if ( !self->client || self->client->ps.weaponCharge <= 0 ||
-	     !( self->client->ps.stats[ STAT_STATE ] & SS_CHARGING ) ||
-	     self->client->ps.weaponTime )
-	{
-		return;
-	}
-
-	if ( !Entities::IsAlive( victim ) )
-	{
-		return;
-	}
-
-	VectorSubtract( victim->s.origin, self->s.origin, forward );
-	VectorNormalize( forward );
-
-	// For buildables, track the last MAX_TRAMPLE_BUILDABLES_TRACKED buildables
-	//  hit, and do not do damage if the current buildable is in that list
-	//  in order to prevent dancing over stuff to kill it very quickly
-	if ( !victim->client )
-	{
-		for ( i = 0; i < MAX_TRAMPLE_BUILDABLES_TRACKED; i++ )
-		{
-			if ( self->client->trampleBuildablesHit[ i ] == victim - g_entities )
-			{
-				return;
-			}
-		}
-
-		self->client->trampleBuildablesHit[
-		  self->client->trampleBuildablesHitPos++ % MAX_TRAMPLE_BUILDABLES_TRACKED ] =
-		    victim - g_entities;
-	}
-
-	damage = LEVEL4_TRAMPLE_DMG * self->client->ps.weaponCharge / LEVEL4_TRAMPLE_DURATION;
-
-	victim->entity->Damage((float)damage, self, Vec3::Load(victim->s.origin), Vec3::Load(forward),
-	                       DAMAGE_NO_LOCDAMAGE, MOD_LEVEL4_TRAMPLE);
-
-	SendMeleeHitEvent( self, victim, nullptr );
-
-	self->client->ps.weaponTime += LEVEL4_TRAMPLE_REPEAT;
-}
-
 /*
 ======================================================================
 
@@ -1687,10 +1251,7 @@ void G_ImpactAttack( gentity_t *self, gentity_t *victim )
 		return;
 	}
 
-	// allow the granger airlifting ritual
-	if ( victim->client && victim->client->ps.stats[ STAT_STATE2 ] & SS2_JETPACK_ACTIVE &&
-	     ( self->client->pers.classSelection == PCL_ALIEN_BUILDER0 ||
-	       self->client->pers.classSelection == PCL_ALIEN_BUILDER0_UPG ) )
+	if ( victim->client && victim->client->ps.stats[ STAT_STATE2 ] & SS2_JETPACK_ACTIVE )
 	{
 		return;
 	}
@@ -1802,33 +1363,9 @@ void G_FireWeapon( gentity_t *self, weapon_t weapon, weaponMode_t weaponMode )
 		{
 			switch ( weapon )
 			{
-				case WP_ALEVEL1:
-					FireLevel1Melee( self );
-					break;
-
-				case WP_ALEVEL3:
-					FireMelee( self, LEVEL3_CLAW_RANGE, LEVEL3_CLAW_WIDTH, LEVEL3_CLAW_WIDTH,
-					           LEVEL3_CLAW_DMG, MOD_LEVEL3_CLAW );
-					break;
-
-				case WP_ALEVEL3_UPG:
-					FireMelee( self, LEVEL3_CLAW_UPG_RANGE, LEVEL3_CLAW_WIDTH, LEVEL3_CLAW_WIDTH,
-					           LEVEL3_CLAW_DMG, MOD_LEVEL3_CLAW );
-					break;
-
-				case WP_ALEVEL2:
-					FireMelee( self, LEVEL2_CLAW_RANGE, LEVEL2_CLAW_WIDTH, LEVEL2_CLAW_WIDTH,
-					           LEVEL2_CLAW_DMG, MOD_LEVEL2_CLAW );
-					break;
-
-				case WP_ALEVEL2_UPG:
-					FireMelee( self, LEVEL2_CLAW_U_RANGE, LEVEL2_CLAW_WIDTH, LEVEL2_CLAW_WIDTH,
-					           LEVEL2_CLAW_DMG, MOD_LEVEL2_CLAW );
-					break;
-
-				case WP_ALEVEL4:
-					FireMelee( self, LEVEL4_CLAW_RANGE, LEVEL4_CLAW_WIDTH, LEVEL4_CLAW_HEIGHT,
-					           LEVEL4_CLAW_DMG, MOD_LEVEL4_CLAW );
+				case WP_ZBASE:
+					FireMelee( self, ZOMBIE_BITE_RANGE, ZOMBIE_BITE_WIDTH, ZOMBIE_BITE_WIDTH,
+					           ZOMBIE_BITE_DMG, MOD_ZOMBIE_BITE );
 					break;
 
 				case WP_BLASTER:
@@ -1887,11 +1424,6 @@ void G_FireWeapon( gentity_t *self, weapon_t weapon, weaponMode_t weaponMode )
 					FireBullet( self, MGTURRET_SPREAD, self->turretCurrentDamage, MOD_MGTURRET );
 					break;
 
-				case WP_ABUILD:
-				case WP_ABUILD2:
-					FireBuild( self, MN_A_BUILD );
-					break;
-
 				case WP_HBUILD:
 					FireBuild( self, MN_H_BUILD );
 					break;
@@ -1908,17 +1440,6 @@ void G_FireWeapon( gentity_t *self, weapon_t weapon, weaponMode_t weaponMode )
 				case WP_LUCIFER_CANNON:
 					FireLcannon( self, true );
 					break;
-
-				case WP_ALEVEL2_UPG:
-					FireAreaZap( self );
-					break;
-
-				case WP_ABUILD:
-				case WP_ABUILD2:
-				case WP_HBUILD:
-					CancelBuild( self );
-					break;
-
 				default:
 					break;
 			}
@@ -1926,19 +1447,6 @@ void G_FireWeapon( gentity_t *self, weapon_t weapon, weaponMode_t weaponMode )
 		}
 		case WPM_TERTIARY:
 		{
-			switch ( weapon )
-			{
-				case WP_ALEVEL3_UPG:
-					FireBounceball( self );
-					break;
-
-				case WP_ABUILD2:
-					FireSlowblob( self );
-					break;
-
-				default:
-					break;
-			}
 			break;
 		}
 		case WPM_DECONSTRUCT:

@@ -1489,48 +1489,8 @@ static void ClientSpawnCBSE(gentity_t *ent, bool evolving) {
 			ent->entity = new SpectatorEntity(params);
 			break;
 
-		case PCL_ALIEN_BUILDER0: {
-			CLIENT_ENTITY_CREATE(GrangerEntity);
-			break;
-		}
-
-		case PCL_ALIEN_BUILDER0_UPG: {
-			CLIENT_ENTITY_CREATE(AdvGrangerEntity);
-			break;
-		}
-
-		case PCL_ALIEN_LEVEL0: {
-			CLIENT_ENTITY_CREATE(DretchEntity);
-			break;
-		}
-
-		case PCL_ALIEN_LEVEL1: {
-			CLIENT_ENTITY_CREATE(MantisEntity);
-			break;
-		}
-
-		case PCL_ALIEN_LEVEL2: {
-			CLIENT_ENTITY_CREATE(MarauderEntity);
-			break;
-		}
-
-		case PCL_ALIEN_LEVEL2_UPG: {
-			CLIENT_ENTITY_CREATE(AdvMarauderEntity);
-			break;
-		}
-
-		case PCL_ALIEN_LEVEL3: {
-			CLIENT_ENTITY_CREATE(DragoonEntity);
-			break;
-		}
-
-		case PCL_ALIEN_LEVEL3_UPG: {
-			CLIENT_ENTITY_CREATE(AdvDragoonEntity);
-			break;
-		}
-
-		case PCL_ALIEN_LEVEL4: {
-			CLIENT_ENTITY_CREATE(TyrantEntity);
+		case PCL_ZOMBIE_BASE: {
+			CLIENT_ENTITY_CREATE(BaseZombieEntity);
 			break;
 		}
 

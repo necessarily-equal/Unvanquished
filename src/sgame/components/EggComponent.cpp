@@ -20,7 +20,7 @@ bool EggComponent::CheckSpawnPoint(
 	BG_BuildableBoundingBox(BA_A_SPAWN, spawnerMins, spawnerMaxs);
 
 	// HACK: Assumes this class is the greatest that can spawn.
-	BG_ClassBoundingBox(PCL_ALIEN_BUILDER0_UPG, clientMins, clientMaxs, nullptr, nullptr, nullptr);
+	BG_ClassBoundingBox(PCL_ZOMBIE_BASE, clientMins, clientMaxs, nullptr, nullptr, nullptr); //ZFIXME: update if larger Z
 
 	// TODO: Merge both methods below.
 	float displacement;

@@ -761,40 +761,6 @@ static bool CG_ParseWeaponFile( const char *filename, int weapon, weaponInfo_t *
 						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK1 ],
 													va( "%s_view.iqm:fire", token2 ), false, false, false );
 						break;
-
-					case WP_ALEVEL1:
-					case WP_ALEVEL2:
-					case WP_ALEVEL4:
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK1 ],
-													va( "%s_view.iqm:fire", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK2 ],
-													va( "%s_view.iqm:fire2", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK3 ],
-													va( "%s_view.iqm:fire3", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK4 ],
-													va( "%s_view.iqm:fire4", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK5 ],
-													va( "%s_view.iqm:fire5", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK6 ],
-													va( "%s_view.iqm:fire6", token2 ), false, false, false );
-						break;
-
-					case WP_ALEVEL2_UPG:
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK1 ],
-													va( "%s_view.iqm:fire", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK2 ],
-													va( "%s_view.iqm:fire2", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK3 ],
-													va( "%s_view.iqm:fire3", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK4 ],
-													va( "%s_view.iqm:fire4", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK5 ],
-													va( "%s_view.iqm:fire5", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK6 ],
-													va( "%s_view.iqm:fire6", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK7 ],
-													va( "%s_view.iqm:fire7", token2 ), false, false, false );
-						break;
 				}
 			}
 			else if ( CG_FileExists( va( "%s_view.md5mesh", token2 ) ) &&
@@ -853,40 +819,6 @@ static bool CG_ParseWeaponFile( const char *filename, int weapon, weaponInfo_t *
 									    va( "%s_view_reload.md5anim", token2 ), false, false, false );
 						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK1 ],
 									    va( "%s_view_fire.md5anim", token2 ), false, false, false );
-						break;
-
-					case WP_ALEVEL1:
-					case WP_ALEVEL2:
-					case WP_ALEVEL4:
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK1 ],
-									    va( "%s_view_fire.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK2 ],
-									    va( "%s_view_fire2.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK3 ],
-									    va( "%s_view_fire3.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK4 ],
-									    va( "%s_view_fire4.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK5 ],
-									    va( "%s_view_fire5.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK6 ],
-									    va( "%s_view_fire6.md5anim", token2 ), false, false, false );
-						break;
-
-					case WP_ALEVEL2_UPG:
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK1 ],
-									    va( "%s_view_fire.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK2 ],
-									    va( "%s_view_fire2.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK3 ],
-									    va( "%s_view_fire3.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK4 ],
-									    va( "%s_view_fire4.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK5 ],
-									    va( "%s_view_fire5.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK6 ],
-									    va( "%s_view_fire6.md5anim", token2 ), false, false, false );
-						CG_RegisterWeaponAnimation( &wi->animations[ WANIM_ATTACK7 ],
-									    va( "%s_view_fire7.md5anim", token2 ), false, false, false );
 						break;
 				}
 			}
@@ -2933,30 +2865,6 @@ float CG_ChargeProgress()
 
 	switch ( cg.snap->ps.weapon )
 	{
-	case WP_ALEVEL1:
-		min = 0;
-		max = LEVEL1_POUNCE_COOLDOWN;
-		break;
-	case WP_ALEVEL3:
-		min = LEVEL3_POUNCE_TIME_MIN;
-		max = LEVEL3_POUNCE_TIME;
-		break;
-	case WP_ALEVEL3_UPG:
-		min = LEVEL3_POUNCE_TIME_MIN;
-		max = LEVEL3_POUNCE_TIME_UPG;
-		break;
-	case WP_ALEVEL4:
-		if ( cg.predictedPlayerState.stats[ STAT_STATE ] & SS_CHARGING )
-		{
-			min = 0;
-			max = LEVEL4_TRAMPLE_DURATION;
-		}
-		else
-		{
-			min = LEVEL4_TRAMPLE_CHARGE_MIN;
-			max = LEVEL4_TRAMPLE_CHARGE_MAX;
-		}
-		break;
 	case WP_LUCIFER_CANNON:
 		min = LCANNON_CHARGE_TIME_MIN;
 		max = LCANNON_CHARGE_TIME_MAX;

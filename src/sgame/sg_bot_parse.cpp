@@ -253,13 +253,6 @@ static AIValue_t directPathTo( gentity_t *self, const AIValue_t *params )
 	return AIBoxInt( false );
 }
 
-static AIValue_t botCanEvolveTo( gentity_t *self, const AIValue_t *params )
-{
-	class_t c = ( class_t ) AIUnBoxInt( params[ 0 ] );
-
-	return AIBoxInt( BotCanEvolveToClass( self, c ) );
-}
-
 static AIValue_t humanMomentum( gentity_t*, const AIValue_t* )
 {
 	return AIBoxInt( level.team[ TEAM_HUMANS ].momentum );
@@ -332,7 +325,6 @@ static const struct AIConditionMap_s
 	{ "alienMomentum",   VALUE_INT,   alienMomentum,   0 },
 	{ "baseRushScore",     VALUE_FLOAT, baseRushScore,     0 },
 	{ "buildingIsDamaged", VALUE_INT,   buildingIsDamaged, 0 },
-	{ "canEvolveTo",       VALUE_INT,   botCanEvolveTo,    1 },
 	{ "class",             VALUE_INT,   botClass,          0 },
 	{ "cvarFloat",         VALUE_FLOAT, cvarFloat,         1 },
 	{ "cvarInt",           VALUE_INT,   cvarInt,           1 },
@@ -922,8 +914,6 @@ static const struct AIActionMap_s
 	{ "classDodge",        BotActionClassDodge,        0, 0 },
 	{ "deactivateUpgrade", BotActionDeactivateUpgrade, 1, 1 },
 	{ "equip",             BotActionBuy,               0, 0 },
-	{ "evolve",            BotActionEvolve,            0, 0 },
-	{ "evolveTo",          BotActionEvolveTo,          1, 1 },
 	{ "fight",             BotActionFight,             0, 0 },
 	{ "fireWeapon",        BotActionFireWeapon,        0, 0 },
 	{ "flee",              BotActionFlee,              0, 0 },
@@ -1299,15 +1289,7 @@ AIBehaviorTree_t *ReadBehaviorTree( const char *name, AITreeList_t *list )
 
 	// add player classes
 	D( PCL_NONE );
-	D( PCL_ALIEN_BUILDER0 );
-	D( PCL_ALIEN_BUILDER0_UPG );
-	D( PCL_ALIEN_LEVEL0 );
-	D( PCL_ALIEN_LEVEL1 );
-	D( PCL_ALIEN_LEVEL2 );
-	D( PCL_ALIEN_LEVEL2_UPG );
-	D( PCL_ALIEN_LEVEL3 );
-	D( PCL_ALIEN_LEVEL3_UPG );
-	D( PCL_ALIEN_LEVEL4 );
+	D( PCL_ZOMBIE_BASE );
 	D( PCL_HUMAN_NAKED );
 	D( PCL_HUMAN_LIGHT );
 	D( PCL_HUMAN_MEDIUM );

@@ -73,62 +73,10 @@ float ABUILDER_BLOB_SPEED_MOD;
 int   ABUILDER_BLOB_TIME;
 int		ABUILDER_BLOB_LOCK_TIME;
 
-int   LEVEL0_BITE_DMG;
-float LEVEL0_BITE_RANGE;
-float LEVEL0_BITE_WIDTH;
-int   LEVEL0_BITE_REPEAT;
-
-int   LEVEL1_CLAW_DMG;
-float LEVEL1_CLAW_RANGE;
-float LEVEL1_CLAW_U_RANGE;
-float LEVEL1_CLAW_WIDTH;
-
-int   LEVEL2_CLAW_DMG;
-float LEVEL2_CLAW_RANGE;
-float LEVEL2_CLAW_U_RANGE;
-float LEVEL2_CLAW_WIDTH;
-int   LEVEL2_AREAZAP_DMG;
-float LEVEL2_AREAZAP_RANGE;
-float LEVEL2_AREAZAP_CHAIN_RANGE;
-float LEVEL2_AREAZAP_CHAIN_FALLOFF;
-float LEVEL2_AREAZAP_WIDTH;
-int   LEVEL2_AREAZAP_TIME;
-float LEVEL2_WALLJUMP_MAXSPEED;
-
-int   LEVEL3_CLAW_DMG;
-float LEVEL3_CLAW_RANGE;
-float LEVEL3_CLAW_UPG_RANGE;
-float LEVEL3_CLAW_WIDTH;
-int   LEVEL3_POUNCE_DMG;
-float LEVEL3_POUNCE_RANGE;
-float LEVEL3_POUNCE_UPG_RANGE;
-float LEVEL3_POUNCE_WIDTH;
-int   LEVEL3_POUNCE_TIME;
-int   LEVEL3_POUNCE_TIME_UPG;
-int   LEVEL3_POUNCE_TIME_MIN;
-int   LEVEL3_POUNCE_REPEAT;
-float LEVEL3_POUNCE_SPEED_MOD;
-int   LEVEL3_POUNCE_JUMP_MAG;
-int   LEVEL3_POUNCE_JUMP_MAG_UPG;
-int   LEVEL3_BOUNCEBALL_DMG;
-float LEVEL3_BOUNCEBALL_SPEED;
-int   LEVEL3_BOUNCEBALL_RADIUS;
-int   LEVEL3_BOUNCEBALL_REGEN;
-int   LEVEL3_BOUNCEBALL_REGEN_BOOSTER;
-int   LEVEL3_BOUNCEBALL_REGEN_CREEP;
-
-int   LEVEL4_CLAW_DMG;
-float LEVEL4_CLAW_RANGE;
-float LEVEL4_CLAW_WIDTH;
-float LEVEL4_CLAW_HEIGHT;
-int   LEVEL4_TRAMPLE_DMG;
-float LEVEL4_TRAMPLE_SPEED;
-int   LEVEL4_TRAMPLE_CHARGE_MIN;
-int   LEVEL4_TRAMPLE_CHARGE_MAX;
-int   LEVEL4_TRAMPLE_CHARGE_TRIGGER;
-int   LEVEL4_TRAMPLE_DURATION;
-int   LEVEL4_TRAMPLE_STOP_PENALTY;
-int   LEVEL4_TRAMPLE_REPEAT;
+int   ZOMBIE_BITE_DMG;
+float ZOMBIE_BITE_RANGE;
+float ZOMBIE_BITE_WIDTH;
+int   ZOMBIE_BITE_REPEAT;
 
 int   MEDKIT_POISON_IMMUNITY_TIME;
 int   MEDKIT_STARTUP_TIME;
@@ -236,64 +184,6 @@ static configVar_t bg_configVars[] =
 	{"w_lcannon_secondarySpeed", INTEGER, false, &LCANNON_SECONDARY_SPEED },
 	{"w_lcannon_size", INTEGER, false, &LCANNON_SIZE },
 	{"w_lcannon_speed", INTEGER, false, &LCANNON_SPEED },
-
-	{"w_level0_biteDmg", INTEGER, false, &LEVEL0_BITE_DMG},
-	{"w_level0_biteRange", FLOAT, false, &LEVEL0_BITE_RANGE},
-	{"w_level0_biteRepeat", INTEGER, false, &LEVEL0_BITE_REPEAT},
-	{"w_level0_biteWidth", FLOAT, false, &LEVEL0_BITE_WIDTH},
-
-	{"w_level1_clawDmg", INTEGER, false, &LEVEL1_CLAW_DMG},
-	{"w_level1_clawRange", FLOAT, false, &LEVEL1_CLAW_RANGE},
-	{"w_level1_clawWidth", FLOAT, false, &LEVEL1_CLAW_WIDTH},
-
-	{"w_level2upg_clawRange", FLOAT, false, &LEVEL2_CLAW_U_RANGE},
-	{"w_level2upg_zapChainFalloff", FLOAT, false, &LEVEL2_AREAZAP_CHAIN_FALLOFF},
-	{"w_level2upg_zapChainRange", FLOAT, false, &LEVEL2_AREAZAP_CHAIN_RANGE},
-	{"w_level2upg_zapDmg", INTEGER, false, &LEVEL2_AREAZAP_DMG},
-	{"w_level2upg_zapRange", FLOAT, false, &LEVEL2_AREAZAP_RANGE},
-	{"w_level2upg_zapTime", INTEGER, false, &LEVEL2_AREAZAP_TIME},
-	{"w_level2upg_zapWidth", FLOAT, false, &LEVEL2_AREAZAP_WIDTH},
-
-	{"w_level2_clawDmg", INTEGER, false, &LEVEL2_CLAW_DMG},
-	{"w_level2_clawRange", FLOAT, false, &LEVEL2_CLAW_RANGE},
-	{"w_level2_clawWidth", FLOAT, false, &LEVEL2_CLAW_WIDTH},
-	{"w_level2_maxWalljumpSpeed", FLOAT, false, &LEVEL2_WALLJUMP_MAXSPEED},
-
-	{"w_level3upg_ballDmg", INTEGER, false, &LEVEL3_BOUNCEBALL_DMG},
-	{"w_level3upg_ballRadius", INTEGER, false, &LEVEL3_BOUNCEBALL_RADIUS},
-	{"w_level3upg_ballRegen", INTEGER, false, &LEVEL3_BOUNCEBALL_REGEN},
-	{"w_level3upg_ballRegenBooster", INTEGER, false, &LEVEL3_BOUNCEBALL_REGEN_BOOSTER},
-	{"w_level3upg_ballRegenCreep", INTEGER, false, &LEVEL3_BOUNCEBALL_REGEN_CREEP},
-	{"w_level3upg_ballSpeed", FLOAT, false, &LEVEL3_BOUNCEBALL_SPEED},
-	{"w_level3upg_clawRange", FLOAT, false, &LEVEL3_CLAW_UPG_RANGE},
-	{"w_level3upg_pounceDuration", INTEGER, false, &LEVEL3_POUNCE_TIME_UPG},
-	{"w_level3upg_pounceJumpMagnitude", INTEGER, false, &LEVEL3_POUNCE_JUMP_MAG_UPG},
-	{"w_level3upg_pounceRange", FLOAT, false, &LEVEL3_POUNCE_UPG_RANGE},
-
-	{"w_level3_clawDmg", INTEGER, false, &LEVEL3_CLAW_DMG},
-	{"w_level3_clawRange", FLOAT, false, &LEVEL3_CLAW_RANGE},
-	{"w_level3_clawWidth", FLOAT, false, &LEVEL3_CLAW_WIDTH},
-	{"w_level3_pounceDmg", INTEGER, false, &LEVEL3_POUNCE_DMG},
-	{"w_level3_pounceDuration", INTEGER, false, &LEVEL3_POUNCE_TIME},
-	{"w_level3_pounceJumpMagnitude", INTEGER, false, &LEVEL3_POUNCE_JUMP_MAG},
-	{"w_level3_pounceRange", FLOAT, false, &LEVEL3_POUNCE_RANGE},
-	{"w_level3_pounceRepeat", INTEGER, false, &LEVEL3_POUNCE_REPEAT},
-	{"w_level3_pounceSpeedMod", FLOAT, false, &LEVEL3_POUNCE_SPEED_MOD},
-	{"w_level3_pounceTimeMin", INTEGER, false, &LEVEL3_POUNCE_TIME_MIN},
-	{"w_level3_pounceWidth", FLOAT, false, &LEVEL3_POUNCE_WIDTH},
-
-	{"w_level4_clawDmg", INTEGER, false, &LEVEL4_CLAW_DMG},
-	{"w_level4_clawHeight", FLOAT, false, &LEVEL4_CLAW_HEIGHT},
-	{"w_level4_clawRange", FLOAT, false, &LEVEL4_CLAW_RANGE},
-	{"w_level4_clawWidth", FLOAT, false, &LEVEL4_CLAW_WIDTH},
-	{"w_level4_trampleChargeMax", INTEGER, false, &LEVEL4_TRAMPLE_CHARGE_MAX},
-	{"w_level4_trampleChargeMin", INTEGER, false, &LEVEL4_TRAMPLE_CHARGE_MIN},
-	{"w_level4_trampleChargeTrigger", INTEGER, false, &LEVEL4_TRAMPLE_CHARGE_TRIGGER},
-	{"w_level4_trampleDmg", INTEGER, false, &LEVEL4_TRAMPLE_DMG},
-	{"w_level4_trampleDuration", INTEGER, false, &LEVEL4_TRAMPLE_DURATION},
-	{"w_level4_trampleRepeat", INTEGER, false, &LEVEL4_TRAMPLE_REPEAT},
-	{"w_level4_trampleSpeed", FLOAT, false, &LEVEL4_TRAMPLE_SPEED},
-	{"w_level4_trampleStopPenalty", INTEGER, false, &LEVEL4_TRAMPLE_STOP_PENALTY},
 
 	{"w_lgun_damage", INTEGER, false, &LASGUN_DAMAGE },
 

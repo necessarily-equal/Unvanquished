@@ -218,49 +218,9 @@ static classData_t bg_classData[] =
 		WP_NONE //weapon_t  startWeapon;
 	},
 	{
-		PCL_ALIEN_BUILDER0, //int     number;
-		"builder", //char    *name;
-		WP_ABUILD //weapon_t  startWeapon;
-	},
-	{
-		PCL_ALIEN_BUILDER0_UPG, //int     number;
-		"builderupg", //char    *name;
-		WP_ABUILD2 //weapon_t  startWeapon;
-	},
-	{
-		PCL_ALIEN_LEVEL0, //int     number;
-		"level0", //char    *name;
-		WP_ALEVEL0 //weapon_t  startWeapon;
-	},
-	{
-		PCL_ALIEN_LEVEL1, //int     number;
-		"level1", //char    *name;
-		WP_ALEVEL1 //weapon_t  startWeapon;
-	},
-	{
-		PCL_ALIEN_LEVEL2, //int     number;
-		"level2", //char    *name;
-		WP_ALEVEL2 //weapon_t  startWeapon;
-	},
-	{
-		PCL_ALIEN_LEVEL2_UPG, //int     number;
-		"level2upg", //char    *name;
-		WP_ALEVEL2_UPG //weapon_t  startWeapon;
-	},
-	{
-		PCL_ALIEN_LEVEL3, //int     number;
-		"level3", //char    *name;
-		WP_ALEVEL3 //weapon_t  startWeapon;
-	},
-	{
-		PCL_ALIEN_LEVEL3_UPG, //int     number;
-		"level3upg", //char    *name;
-		WP_ALEVEL3_UPG //weapon_t  startWeapon;
-	},
-	{
-		PCL_ALIEN_LEVEL4, //int     number;
-		"level4", //char    *name;
-		WP_ALEVEL4 //weapon_t  startWeapon;
+		PCL_ZOMBIE_BASE, //int     number;
+		"zbase", //char    *name;
+		WP_ZBASE //weapon_t  startWeapon;
 	},
 	{
 		PCL_HUMAN_NAKED, //int     number;
@@ -442,15 +402,6 @@ evolveInfo_t BG_ClassEvolveInfoFromTo( const int from, const int to )
 	evolveCost = toCost - fromCost;
 
 	isDevolving = evolveCost <= 0;
-	// exception for peolpe evolving to dretch
-	if ( ( from == PCL_ALIEN_BUILDER0 || from == PCL_ALIEN_BUILDER0_UPG ) && to == PCL_ALIEN_LEVEL0 ) {
-		isDevolving = false;
-	}
-	// and to adv granger
-	if ( from == PCL_ALIEN_BUILDER0 && to == PCL_ALIEN_BUILDER0_UPG )
-	{
-		isDevolving = false;
-	}
 
 	return { classIsUnlocked, isDevolving, evolveCost };
 }
@@ -480,29 +431,6 @@ bool BG_AlienCanEvolve( int from, int credits )
 	}
 
 	return false;
-}
-
-/*
-===============
-BG_GetBarbRegenerationInterval
-===============
-*/
-int BG_GetBarbRegenerationInterval(const playerState_t& ps)
-{
-	if ( ps.stats[ STAT_STATE ] & SS_HEALING_8X )
-	{
-		// regeneration interval near booster
-		return LEVEL3_BOUNCEBALL_REGEN_BOOSTER;
-	}
-	else if ( ps.stats[ STAT_STATE ] & SS_HEALING_4X )
-	{
-		// regeneration interval on creep
-		return LEVEL3_BOUNCEBALL_REGEN_CREEP;
-	}
-	else
-	{
-		return LEVEL3_BOUNCEBALL_REGEN;
-	}
 }
 
 /*
@@ -562,13 +490,7 @@ struct weaponData_t
 
 static const weaponData_t bg_weaponsData[] =
 {
-	{ WP_ALEVEL0,           "level0"    },
-	{ WP_ALEVEL1,           "level1"    },
-	{ WP_ALEVEL2,           "level2"    },
-	{ WP_ALEVEL2_UPG,       "level2upg" },
-	{ WP_ALEVEL3,           "level3"    },
-	{ WP_ALEVEL3_UPG,       "level3upg" },
-	{ WP_ALEVEL4,           "level4"    },
+	{ WP_ZBASE,             "zbase"    },
 	{ WP_BLASTER,           "blaster"   },
 	{ WP_MACHINEGUN,        "rifle"     },
 	{ WP_PAIN_SAW,          "psaw"      },
@@ -765,7 +687,6 @@ static const missileData_t bg_missilesData[] =
   { MIS_FIREBOMB_SUB, "firebomb_sub" },
   { MIS_HIVE,         "hive"         },
   { MIS_LOCKBLOB,     "lockblob"     },
-  { MIS_SLOWBLOB,     "slowblob"     },
   { MIS_BOUNCEBALL,   "bounceball"   },
   { MIS_ROCKET,       "rocket"       },
   { MIS_SPIKER,       "spiker"       }
@@ -840,7 +761,6 @@ struct meansOfDeathData_t
 
 static const meansOfDeathData_t bg_meansOfDeathData[] =
 {
-	{ MOD_ABUILDER_CLAW, "MOD_ABUILDER_CLAW" },
 	{ MOD_UNKNOWN, "MOD_UNKNOWN" },
 	{ MOD_SHOTGUN, "MOD_SHOTGUN" },
 	{ MOD_BLASTER, "MOD_BLASTER" },
@@ -867,18 +787,8 @@ static const meansOfDeathData_t bg_meansOfDeathData[] =
 	{ MOD_SUICIDE, "MOD_SUICIDE" },
 	{ MOD_TARGET_LASER, "MOD_TARGET_LASER" },
 	{ MOD_TRIGGER_HURT, "MOD_TRIGGER_HURT" },
-	{ MOD_ABUILDER_CLAW, "MOD_ABUILDER_CLAW" },
-	{ MOD_LEVEL0_BITE, "MOD_LEVEL0_BITE" },
-	{ MOD_LEVEL1_CLAW, "MOD_LEVEL1_CLAW" },
-	{ MOD_LEVEL3_CLAW, "MOD_LEVEL3_CLAW" },
-	{ MOD_LEVEL3_POUNCE, "MOD_LEVEL3_POUNCE" },
-	{ MOD_LEVEL3_BOUNCEBALL, "MOD_LEVEL3_BOUNCEBALL" },
-	{ MOD_LEVEL2_CLAW, "MOD_LEVEL2_CLAW" },
-	{ MOD_LEVEL2_ZAP, "MOD_LEVEL2_ZAP" },
-	{ MOD_LEVEL4_CLAW, "MOD_LEVEL4_CLAW" },
-	{ MOD_LEVEL4_TRAMPLE, "MOD_LEVEL4_TRAMPLE" },
+	{ MOD_ZOMBIE_BITE, "MOD_ZOMBIE_BITE" },
 	{ MOD_WEIGHT_A, "MOD_WEIGHT_A" },
-	{ MOD_SLOWBLOB, "MOD_SLOWBLOB" },
 	{ MOD_POISON, "MOD_POISON" },
 	{ MOD_SWARM, "MOD_SWARM" },
 	{ MOD_HSPAWN, "MOD_HSPAWN" },

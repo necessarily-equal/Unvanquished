@@ -787,8 +787,6 @@ struct centity_t
 	particleSystem_t      *entityPS;
 	bool              entityPSMissing;
 
-	trailSystem_t         *level2ZapTS[ LEVEL2_AREAZAP_MAX_TARGETS ];
-
 	trailSystem_t         *muzzleTS;
 	int                   muzzleTSDeathTime;
 

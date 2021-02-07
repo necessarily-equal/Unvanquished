@@ -435,12 +435,6 @@ static void CG_Rocket_DFCMAlienEvolve( int handle, const char *data )
 		action = va( "onClick='Cmd.exec(\"class %s\") Events.pushevent(\"hide %s\", event)'", BG_Class( alienClass )->name, rocketInfo.menu[ ROCKETMENU_ALIENEVOLVE ].id );
 	}
 
-	if ( ( alienClass == PCL_ALIEN_BUILDER0 && BG_ClassUnlocked( PCL_ALIEN_BUILDER0_UPG ) && !BG_ClassDisabled( PCL_ALIEN_BUILDER0_UPG ) )
-			|| ( alienClass == PCL_ALIEN_BUILDER0_UPG && ( !BG_ClassUnlocked( PCL_ALIEN_BUILDER0_UPG ) ) ) )
-	{
-		CosmeticClass = "doublegranger";
-	}
-
 	const char *formatted = va( "<button class='alienevo %s %s' %s>%s<img src='/%s'/></button>",
 			FunctionalClass, CosmeticClass, action, Icon,
 			CG_GetShaderNameFromHandle( cg_classes[ alienClass ].classIcon ));

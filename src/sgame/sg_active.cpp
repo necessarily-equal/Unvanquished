@@ -381,12 +381,6 @@ void ClientImpacts( gentity_t *ent, pmove_t *pm )
 		G_ImpactAttack( ent, other );
 		G_WeightAttack( ent, other );
 
-		// tyrant trample
-		if ( ent->client->ps.weapon == WP_ALEVEL4 )
-		{
-			G_ChargeAttack( ent, other );
-		}
-
 		// shove players
 		if ( other->client )
 		{
@@ -1079,12 +1073,7 @@ void ClientTimerActions( gentity_t *ent, int msec )
 	{
 		client->time10000 -= 10000;
 
-		if ( ent->client->ps.weapon == WP_ABUILD ||
-		     ent->client->ps.weapon == WP_ABUILD2 )
-		{
-			G_AddCreditsToScore( ent, ALIEN_BUILDER_SCOREINC );
-		}
-		else if ( ent->client->ps.weapon == WP_HBUILD )
+		if ( ent->client->ps.weapon == WP_HBUILD )
 		{
 			G_AddCreditsToScore( ent, HUMAN_BUILDER_SCOREINC );
 		}
@@ -1780,29 +1769,6 @@ static void G_ReplenishAlienHealth( gentity_t *self )
 	}
 }
 
-static void G_ReplenishDragoonBarbs( gentity_t *self, int msec )
-{
-	gclient_t *client = self->client;
-
-	if ( client->ps.weapon == WP_ALEVEL3_UPG )
-	{
-		if ( client->ps.ammo < BG_Weapon( WP_ALEVEL3_UPG )->maxAmmo )
-		{
-			float interval = BG_GetBarbRegenerationInterval(self->client->ps);
-			self->barbRegeneration += (float)msec / interval;
-			if ( self->barbRegeneration >= 1.0f )
-			{
-				self->barbRegeneration -= 1.0f;
-				client->ps.ammo++;
-			}
-		}
-		else
-		{
-			self->barbRegeneration = 0.0f;
-		}
-	}
-}
-
 /*
 ==============
 ClientThink_real
@@ -1930,12 +1896,6 @@ void ClientThink_real( gentity_t *self )
 		client->ps.stats[ STAT_STATE ] &= ~SS_BLOBLOCKED;
 	}
 
-	if ( ( client->ps.stats[ STAT_STATE ] & SS_SLOWLOCKED ) &&
-	     client->lastSlowTime + ABUILDER_BLOB_TIME < level.time )
-	{
-		client->ps.stats[ STAT_STATE ] &= ~SS_SLOWLOCKED;
-	}
-
 	// Update boosted state flags
 	client->ps.stats[ STAT_STATE ] &= ~SS_BOOSTEDWARNING;
 
@@ -1968,8 +1928,6 @@ void ClientThink_real( gentity_t *self )
 
 	// Replenish alien health
 	G_ReplenishAlienHealth( self );
-
-	G_ReplenishDragoonBarbs( self, msec );
 
 	// Throw human grenade
 	if ( BG_InventoryContainsUpgrade( UP_GRENADE, client->ps.stats ) &&
@@ -2008,12 +1966,6 @@ void ClientThink_real( gentity_t *self )
 	if ( client->lastCreepSlowTime + CREEP_TIMEOUT < level.time )
 	{
 		client->ps.stats[ STAT_STATE ] &= ~SS_CREEPSLOWED;
-	}
-
-	// unset level1slow flag if it's time
-	if ( client->lastLevel1SlowTime + LEVEL1_SLOW_TIME < level.time )
-	{
-		client->ps.stats[ STAT_STATE2 ] &= ~SS2_LEVEL1SLOW;
 	}
 
 	// set up for pmove
@@ -2083,44 +2035,6 @@ void ClientThink_real( gentity_t *self )
 
 	switch ( client->ps.weapon )
 	{
-		case WP_ALEVEL0:
-			if ( !G_CheckVenomAttack( self ) )
-			{
-				client->ps.weaponstate = WEAPON_READY;
-			}
-			else
-			{
-				client->ps.generic1 = WPM_PRIMARY;
-				G_AddEvent( self, EV_FIRE_WEAPON, 0 );
-			}
-
-			break;
-
-		case WP_ALEVEL3:
-		case WP_ALEVEL3_UPG:
-			if ( !G_CheckPounceAttack( self ) )
-			{
-				client->ps.weaponstate = WEAPON_READY;
-			}
-			else
-			{
-				client->ps.generic1 = WPM_SECONDARY;
-				G_AddEvent( self, EV_FIRE_WEAPON2, 0 );
-			}
-
-			break;
-
-		case WP_ALEVEL4:
-
-			// If not currently in a trample, reset the trample bookkeeping data
-			if ( !( client->ps.pm_flags & PMF_CHARGE ) && client->trampleBuildablesHitPos )
-			{
-				client->trampleBuildablesHitPos = 0;
-				memset( client->trampleBuildablesHit, 0, sizeof( client->trampleBuildablesHit ) );
-			}
-
-			break;
-
 		case WP_HBUILD:
 			G_CheckCkitRepair( self );
 			break;

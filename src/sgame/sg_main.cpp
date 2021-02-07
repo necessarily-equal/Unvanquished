@@ -59,7 +59,6 @@ vmCvar_t           g_showHelpOnConnection;
 vmCvar_t           g_timelimit;
 vmCvar_t           g_friendlyFire;
 vmCvar_t           g_friendlyBuildableFire;
-vmCvar_t           g_dretchPunt;
 vmCvar_t           g_password;
 vmCvar_t           g_needpass;
 vmCvar_t           g_maxclients;
@@ -403,8 +402,6 @@ static cvarTable_t gameCvarTable[] =
 	{ &g_gravity,                     "g_gravity",                     "800",                              0,                                               0, true, cv_gravity},
 	{ &g_antiSpawnBlock,              "g_antiSpawnBlock",              "0",                                0,                                               0, false    , nullptr       },
 	{ &g_shove,                       "g_shove",                       "0.0",                              0,                                               0, false    , nullptr       },
-	{ &g_dretchPunt,                  "g_dretchPunt",                  "1",                                0,                                               0, true     , nullptr       },
-	{ &g_allowTeamOverlay,            "g_allowTeamOverlay",            "1",                                0,                                               0, true     , nullptr       },
 	{ &g_showKillerHP,                "g_showKillerHP",                "0",                                0,                                               0, false    , nullptr       },
 	{ &g_combatCooldown,              "g_combatCooldown",              "15",                               0,                                               0, false    , nullptr       },
 
@@ -2836,7 +2833,6 @@ void G_RunFrame( int levelTime )
 	G_CalculateAvgPlayers();
 	G_SpawnClients( TEAM_ALIENS );
 	G_SpawnClients( TEAM_HUMANS );
-	G_UpdateZaps( msec );
 	Beacon::Frame( );
 
 	G_PrepareEntityNetCode();

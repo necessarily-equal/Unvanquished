@@ -546,8 +546,9 @@ void Cmd_Devteam_f( gentity_t *ent )
 		case TEAM_ALIENS:
 			G_LeaveTeam( ent );
 			ent->client->pers.team = TEAM_ALIENS;
-			ent->client->pers.classSelection = PCL_ALIEN_BUILDER0_UPG;
-			ent->client->ps.stats[ STAT_CLASS ] = PCL_ALIEN_BUILDER0_UPG;
+			ent->client->pers.humanItemSelection = WP_HBUILD;
+			ent->client->pers.classSelection = PCL_HUMAN_NAKED;
+			ent->client->ps.stats[ STAT_CLASS ] = PCL_HUMAN_NAKED;
 			break;
 		case TEAM_HUMANS:
 			G_LeaveTeam( ent );
@@ -2284,9 +2285,7 @@ static bool Cmd_Class_internal( gentity_t *ent, const char *s, bool report )
 		team = (team_t) ent->client->pers.team;
 		if ( team == TEAM_ALIENS )
 		{
-			if ( newClass != PCL_ALIEN_BUILDER0 &&
-			     newClass != PCL_ALIEN_BUILDER0_UPG &&
-			     newClass != PCL_ALIEN_LEVEL0 )
+			if ( newClass != PCL_ZOMBIE_BASE /*ZFIXME: ZPLAYER*/ )
 			{
 				if ( report )
 				{
@@ -2436,18 +2435,6 @@ static bool Cmd_Class_internal( gentity_t *ent, const char *s, bool report )
 				if ( report )
 				{
 					G_TriggerMenu( clientNum, MN_A_EVOLVEWALLWALK );
-				}
-				return false;
-			}
-
-			if ( ent->client->sess.spectatorState == SPECTATOR_NOT &&
-			     ( currentClass == PCL_ALIEN_BUILDER0 ||
-			       currentClass == PCL_ALIEN_BUILDER0_UPG ) &&
-			     ent->client->ps.stats[ STAT_MISC ] > 0 )
-			{
-				if ( report )
-				{
-					G_TriggerMenu( ent->client->ps.clientNum, MN_A_EVOLVEBUILDTIMER );
 				}
 				return false;
 			}
