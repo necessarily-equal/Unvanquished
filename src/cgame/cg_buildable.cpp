@@ -2557,3 +2557,39 @@ void CG_Buildable( centity_t *cent )
 		CG_EndShadowCaster( );
 	}
 }
+
+// maybe move this to shared/ and add a prototype?
+static bool BG_IsMainBuildable(buildable_t buildable)
+{
+	return buildable == BA_A_OVERMIND || buildable == BA_H_REACTOR;
+}
+
+const centity_t *CG_LookupMainBuildable()
+{
+	const int playerTeam = cg.predictedPlayerState.persistant[ PERS_TEAM ];
+
+	for (const centity_t &ent : cg_entities) // CHECKME: what happens when we iterate on unused entities?
+	{
+		if ( ent.currentState.eType != entityType_t::ET_BUILDABLE )
+			continue;
+
+		const buildable_t buildingType =
+			(buildable_t) ent.currentState.modelindex;
+
+		if ( playerTeam == BG_Buildable(buildingType)->team
+				&& BG_IsMainBuildable(buildingType) )
+		{
+			return &ent;
+		}
+	}
+
+	return nullptr;
+}
+
+float CG_DistanceToMainBuildable()
+{
+	const centity_t *ent = CG_LookupMainBuildable();
+	if (!ent)
+		return 1e+37f; // in accordance to sgame
+	return Distance(cg.predictedPlayerEntity.lerpOrigin, ent->lerpOrigin);
+}
