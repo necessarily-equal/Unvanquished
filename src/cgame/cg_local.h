@@ -2057,6 +2057,7 @@ void CG_PositionEntityOnTag( refEntity_t *entity, const refEntity_t *parent,
 void CG_PositionRotatedEntityOnTag( refEntity_t *entity, const refEntity_t *parent,
                                     qhandle_t parentModel, const char *tagName );
 void CG_TransformSkeleton( refSkeleton_t *skel, const vec_t scale );
+team_t CG_Team(const centity_t *ent);
 
 //
 // cg_weapons.c

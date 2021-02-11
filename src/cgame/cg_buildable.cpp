@@ -316,7 +316,6 @@ Sets buildable particle system to a fire effect if buildable is burning
 static void CG_OnFire( centity_t *cent )
 {
 	entityState_t *es = &cent->currentState;
-	team_t        team = BG_Buildable( es->modelindex )->team;
 
 	if ( es->eType != entityType_t::ET_BUILDABLE )
 	{
@@ -333,6 +332,7 @@ static void CG_OnFire( centity_t *cent )
 		return;
 	}
 
+	team_t team = (team_t) es->modelindex2;
 	switch ( team )
 	{
 		case TEAM_ALIENS:
@@ -364,7 +364,7 @@ models/buildables/hivemind/animation.cfg, etc
 */
 static bool CG_ParseBuildableAnimationFile( const char *filename, buildable_t buildable )
 {
-	const char         *text_p;
+	const char   *text_p;
 	int          len;
 	int          i;
 	char         *token;
@@ -1338,9 +1338,12 @@ CG_BuildableParticleEffects
 static void CG_BuildableParticleEffects( centity_t *cent )
 {
 	entityState_t *es = &cent->currentState;
-	team_t        team = BG_Buildable( es->modelindex )->team;
-	int           health = es->generic1;
-	float         healthFrac = ( float ) health / BG_Buildable( es->modelindex )->health;
+
+	ASSERT_EQ(es->eType, entityType_t::ET_BUILDABLE);
+
+	team_t team = (team_t) es->modelindex2;
+	int    health = es->generic1;
+	float  healthFrac = ( float ) health / BG_Buildable( es->modelindex )->health;
 
 	if ( !( es->eFlags & EF_B_SPAWNED ) )
 	{
@@ -2576,7 +2579,7 @@ const centity_t *CG_LookupMainBuildable()
 		const buildable_t buildingType =
 			(buildable_t) ent.currentState.modelindex;
 
-		if ( playerTeam == BG_Buildable(buildingType)->team
+		if ( playerTeam == ent.currentState.modelindex2
 				&& BG_IsMainBuildable(buildingType) )
 		{
 			return &ent;
