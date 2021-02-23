@@ -781,6 +781,7 @@ void BG_ParseBuildableAttributeFile( const char *filename, buildableAttributes_t
 		}
 		else if ( !Q_stricmp( token, "dretchAttackable" ) )
 		{
+			printf("~~~~~~~~~~~~~~found!\n");
 			ba->dretchAttackable = true;
 		}
 		else if( (var = BG_FindConfigVar( va( "b_%s_%s", ba->name, token ) ) ) != nullptr )

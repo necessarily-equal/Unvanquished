@@ -188,6 +188,7 @@ bool G_DretchCanDamageEntity( const gentity_t *self, const gentity_t *ent )
 		case entityType_t::ET_PLAYER:
 			return true;
 		case entityType_t::ET_BUILDABLE:
+			Log::Notice( "spawned: %i, dretchAttackable: %i", ent->spawned, BG_Buildable( ent->s.modelindex )->dretchAttackable );
 			// dretches can only bite buildables in construction or turrets
 			if ( !ent->spawned || BG_Buildable( ent->s.modelindex )->dretchAttackable )
 			{
