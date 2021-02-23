@@ -607,6 +607,7 @@ void BG_ParseBuildableAttributeFile( const char *filename, buildableAttributes_t
 
 	text = text_buffer;
 
+	ba->dretchAttackable = false; //FIXME
 	while ( 1 )
 	{
 		PARSE(text, token);
