@@ -142,6 +142,14 @@ void BuildableComponent::Think(int timeDelta) {
 		}
 	} while (state != oldState); // After every state change, the new state is evaluated, too.
 
+	// Sudden death
+	const float healthHalfLife = g_buildPointRecoveryRateHalfLife.value;
+	const float rate = 1 - 0.8f / std::pow(2.0f, (float)level.matchTime / (60000.0f * healthHalfLife));
+	float normalMaxHealth = BG_Buildable(entity.oldEnt->s.modelindex)->health; // FIXME
+	normalMaxHealth = roundf( normalMaxHealth / 10.0f ) * 10.0f;
+	GetHealthComponent().SetMaxHealth(normalMaxHealth * rate, true);
+
+
 	// TODO: Move this to SpawnerComponent?
 	entity.oldEnt->clientSpawnTime = std::max(0, entity.oldEnt->clientSpawnTime - timeDelta);
 
