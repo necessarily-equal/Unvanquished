@@ -1258,7 +1258,7 @@ LEVEL0
 ======================================================================
 */
 
-bool G_CheckVenomAttack( gentity_t *self )
+bool G_CheckDretchAttack( gentity_t *self )
 {
 	trace_t   tr;
 	gentity_t *traceEnt;
@@ -1274,22 +1274,11 @@ bool G_CheckVenomAttack( gentity_t *self )
 
 	G_WideTrace( &tr, self, LEVEL0_BITE_RANGE, LEVEL0_BITE_WIDTH, LEVEL0_BITE_WIDTH, &traceEnt );
 
-	if ( !Entities::IsAlive( traceEnt ) || G_OnSameTeam( self, traceEnt ) )
+	if ( !Entities::IsAlive( traceEnt )
+			|| G_OnSameTeam( self, traceEnt )
+			|| !G_DretchCanDamageEntity( self, traceEnt ) )
 	{
 		return false;
-	}
-
-	// only allow bites to work against buildables in construction and turrets and rocket pods.
-	if ( traceEnt->s.eType == entityType_t::ET_BUILDABLE && traceEnt->spawned )
-	{
-		switch ( traceEnt->s.modelindex )
-		{
-			case BA_H_MGTURRET:
-			case BA_H_ROCKETPOD:
-				break;
-			default:
-				return false;
-		}
 	}
 
 	traceEnt->entity->Damage((float)LEVEL0_BITE_DMG, self, Vec3::Load(tr.endpos),
