@@ -124,6 +124,21 @@ Util::optional<Vec3> direction, int flags, meansOfDeath_t meansOfDeath) {
 		entity.ApplyDamageModifier(take, location, direction, flags, meansOfDeath);
 	}
 
+	switch (meansOfDeath)
+	{
+		case MOD_SHOTGUN:
+		case MOD_MACHINEGUN:
+		case MOD_CHAINGUN:
+		case MOD_MGTURRET:
+			if (client && client->ps.stats[STAT_CLASS] == PCL_ALIEN_LEVEL4)
+			{
+			take *= 0.8;
+			}
+			break;
+		default:
+			break;
+	}
+
 	// Update combat timers.
 	// TODO: Add a message to update combat timers.
 	if (client && source->client && entity.oldEnt != source) {
