@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __BOT_PARSE_HEADER
 
 #include "shared/parse.h"
-#include "sg_bot_ai.h"
+#include "sg_bot_behavior_tree.h"
 
 #define allocNode(T) ( T * ) BG_Alloc( sizeof( T ) );
 #define stringify2(T, val) va( #T " %d", val )
@@ -66,15 +66,7 @@ struct pc_token_list
 pc_token_list *CreateTokenList( int handle );
 void           FreeTokenList( pc_token_list *list );
 
-std::shared_ptr<AIGenericNode>  ReadNode( pc_token_list **tokenlist );
+std::shared_ptr<AIGenericNode>  ParseNode( pc_token_list **tokenlist );
 std::shared_ptr<AIBehaviorTree> ReadBehaviorTree( const char *name, AITreeList *tree );
-
-struct parseError {
-	parseError(const char *_message, int _line = 0)
-		: message(_message), line(_line) {};
-	const char *message;
-	int line;
-};
-void WarnAboutParseError( parseError p );
 
 #endif

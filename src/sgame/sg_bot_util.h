@@ -144,6 +144,8 @@ float    BotGetGoalRadius( gentity_t *self );
 void     BotFindRandomPointOnMesh( gentity_t *self, vec3_t point );
 bool BotPathIsWalkable( gentity_t *self, botTarget_t target );
 
+botEntityAndDistance_t AIEntityToGentity( gentity_t *self, AIEntity_t e );
+
 //configurable constants
 //For a reference of how far a number represents, take a look at tremulous.h
 

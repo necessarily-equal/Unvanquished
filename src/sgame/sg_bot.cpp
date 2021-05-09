@@ -198,23 +198,12 @@ bool G_BotSetBehavior( botMemory_t *botMind, const char* behavior )
 	memset( &botMind->nav, 0, sizeof( botMind->nav ) );
 	BotResetEnemyQueue( &botMind->enemyQueue );
 
-	try {
-		botMind->behaviorTree = ReadBehaviorTree( behavior, &treeList );
-	} catch (parseError p) {
-		WarnAboutParseError( p );
-	} catch (const char *message) {
-		Log::Warn( "%s", message );
-	}
+	botMind->behaviorTree = ReadBehaviorTree( behavior, &treeList );
+
 	if ( !botMind->behaviorTree )
 	{
 		Log::Warn( "Problem when loading behavior tree %s, trying default", behavior );
-		try {
-			botMind->behaviorTree = ReadBehaviorTree( "default", &treeList );
-		} catch (parseError p) {
-			WarnAboutParseError( p );
-		} catch (const char *message) {
-			Log::Warn( "%s", message );
-		}
+		botMind->behaviorTree = ReadBehaviorTree( "default", &treeList );
 
 		if ( !botMind->behaviorTree )
 		{
@@ -385,6 +374,8 @@ void G_BotDelAllBots()
 	{
 		level.team[team].botFillTeamSize = 0;
 	}
+
+	treeList.clear(); // wipe cache, practical for testing
 }
 
 /*
@@ -455,7 +446,7 @@ void G_BotThink( gentity_t *self )
 		//BotClampPos( self );
 	}
 
-	self->botMind->behaviorTree->run( self, self->botMind->behaviorTree.get() );
+	self->botMind->behaviorTree->run( self );
 
 	// if we were nudged...
 	VectorAdd( self->client->ps.velocity, nudge, self->client->ps.velocity );

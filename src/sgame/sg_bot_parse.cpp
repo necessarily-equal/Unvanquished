@@ -25,20 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "shared/parse.h"
 #include "sg_bot_parse.h"
+#include "sg_bot_behavior_tree.h"
 #include "sg_bot_util.h"
 #include "Entities.h"
-
-void WarnAboutParseError( parseError p )
-{
-	if ( p.line != 0 )
-	{
-		Log::Warn( "Parse error %s on line %i", p.message, p.line );
-	}
-	else
-	{
-		Log::Warn( "Parse error %s", p.message );
-	}
-}
 
 static bool expectToken( const char *s, pc_token_list **list, bool next )
 {
@@ -682,7 +671,7 @@ static std::unique_ptr<AIExpression_t> Primary( pc_token_list **list )
 
 /*
 ======================
-AIConditionNode constructor
+ParseConditionNode constructor
 
 Parses and creates an AIConditionNode from a token list
 The token list pointer is modified to point to the beginning of the next node text block
@@ -699,60 +688,63 @@ condition [expression]
 ======================
 */
 
-AIConditionNode::AIConditionNode( pc_token_list **tokenlist )
-	: AIGenericNode{ CONDITION_NODE, BotConditionNode },
-	  child(nullptr), exp(nullptr)
+std::shared_ptr<AIConditionNode> ParseConditionNode( pc_token_list **tokenlist )
 {
 	pc_token_list *current = *tokenlist;
 
 	expectToken( "condition", &current, true );
 
-	exp = ReadConditionExpression( &current, OP_NONE );
+	auto exp = ReadConditionExpression( &current, OP_NONE );
 
 	if ( !current )
 	{
 		*tokenlist = current;
-		throw parseError("unexpected end of file");
+		Log::Warn( "Parse error: unexpected end of file while parsing condition" );
+		return nullptr;
 	}
 
 	if ( !exp )
 	{
 		*tokenlist = current;
-		throw parseError("missing expression in condition");
+		Log::Warn( "Parse error: missing expression in condition" );
+		return nullptr;
 	}
 
 	if ( Q_stricmp( current->token.string, "{" ) )
 	{
 		// this condition node has no child nodes
 		*tokenlist = current;
-		return;
+		return std::make_shared<AIConditionNode>( std::move(exp), std::shared_ptr<AIGenericNode>(nullptr) );
 	}
 
 	current = current->next;
 
-	child = ReadNode( &current );
+	auto child = ParseNode( &current );
 
 	if ( !child )
 	{
 		*tokenlist = current;
-		throw parseError("Parse error: could not parse child node of condition", (*tokenlist)->token.line);
+		Log::Warn( "Parse error: could not parse child node of condition at line %i", (*tokenlist)->token.line );
+		return nullptr;
 	}
 
 	if ( !expectToken( "}", &current, true ) )
 	{
 		*tokenlist = current;
-		throw parseError("expected } at end of condition body", current->token.line);
+		Log::Warn( "Parse error: expected } at end of condition body at line %i", current->token.line );
+		return nullptr;
 	}
 
 	*tokenlist = current;
+	return std::make_shared<AIConditionNode>( std::move(exp), std::move(child) );
 }
 
 static const struct AIDecoratorMap_s
 {
-	const char   *name;
-	AINodeRunner run;
-	int          minparams;
-	int          maxparams;
+	const char        *name;
+	AIDecoratorRunner run;
+	int               minparams;
+	int               maxparams;
 } AIDecorators[] =
 {
 	{ "return", BotDecoratorReturn, 1, 1 },
@@ -761,7 +753,7 @@ static const struct AIDecoratorMap_s
 
 /*
 ======================
-AIDecoratorNode constructor
+ParseDecoratorNode
 
 Parses and creates an DecoratorNode_t from a token list
 The token list pointer is modified to point to the beginning of the next node text block
@@ -776,18 +768,18 @@ and will trigger when that value is returned, or each TIME milliseconds.
 ======================
 */
 
-AIDecoratorNode::AIDecoratorNode( pc_token_list **list )
-	: AIGenericNode{ DECORATOR_NODE, nullptr }, child(nullptr), data{}
+std::shared_ptr<AIDecoratorNode> ParseDecoratorNode( pc_token_list **list )
 {
 	pc_token_list *current = *list;
-	pc_token_list           *parenBegin;
+	pc_token_list *parenBegin;
 
 	expectToken( "decorator", &current, true );
 
 	if ( !current )
 	{
 		*list = current;
-		throw parseError("unexpected end of file");
+		Log::Warn("Parse error: unexpected end of file");
+		return nullptr;
 	}
 
 	auto dec = (struct AIDecoratorMap_s*) bsearch( current->token.string,
@@ -797,51 +789,53 @@ AIDecoratorNode::AIDecoratorNode( pc_token_list **list )
 	if ( !dec )
 	{
 		*list = current;
-		throw parseError("invalid decorator", current->token.line);
+		Log::Warn( "Parse error: invalid decorator \"%s\" on line %i", current->token.string, current->token.line );
+		return nullptr;
 	}
 
 	parenBegin = current->next;
 
-	run = dec->run;
-
 	// allow dropping of parenthesis if we don't require any parameters
 	if ( dec->minparams == 0 && parenBegin->token.string[0] != '(' )
 	{
-		return;
+		return std::make_shared<AIDecoratorNode>( dec->run, nullptr, std::vector<AIValue_t>() );
 	}
 
-	params = parseFunctionParameters( &current, dec->minparams, dec->maxparams );
+	auto params = parseFunctionParameters( &current, dec->minparams, dec->maxparams );
 
 	if ( params.size() == 0 && dec->minparams > 0 )
 	{
 		*list = current;
-		throw parseError("could not parse function parameters", current->prev->token.line);
+		Log::Warn( "Parse error: could not parse function parameters at line %i", current->prev->token.line );
 	}
 
 	if ( !expectToken( "{", &current, true ) )
 	{
 		*list = current;
-		throw parseError("missing {", current->prev->token.line);
+		Log::Warn( "Parse error: missing { at line %i", current->prev->token.line );
+		return nullptr;
 	}
 
-	child = ReadNode( &current );
+	auto child = ParseNode( &current );
 
 	if ( !child )
 	{
 		*list = current;
-		throw parseError("failed to parse child node of decorator", current->token.line );
+		Log::Warn( "Parse error: failed to parse child node of decorator at line %i", current->token.line );
+		return nullptr;
 	}
 
 	expectToken( "}", &current, true );
 	*list = current;
+	return std::make_shared<AIDecoratorNode>( dec->run, std::move(child), std::move(params) );
 }
 
 static const struct AIActionMap_s
 {
-	const char   *name;
-	AINodeRunner run;
-	int          minparams;
-	int          maxparams;
+	const char     *name;
+	AIActionRunner run;
+	int            minparams;
+	int            maxparams;
 } AIActions[] =
 {
 	{ "activateUpgrade",   BotActionActivateUpgrade,   1, 1 },
@@ -876,20 +870,23 @@ static const struct AIActionMap_s
 
 /*
 ======================
-AIActionNode constructor
+ParseActionNode
 
 Parses and creates an AIGenericNode with the type ACTION_NODE from a token list
-The token list pointer is modified to point to the beginning of the next node text block after reading
+The token list pointer is modified to point to the beginning of the next node
+text block after reading
 
 An action node has the form:
-action name( p1, p2, ... )
+	action name( p1, p2, ... )
+or
+	action name
 
-Where name defines the action to execute, and the parameters are surrounded by parenthesis
+Where name defines the action to execute, and the parameters are surrounded by
+parenthesis. The parameters are optional.
 ======================
 */
 
-AIActionNode::AIActionNode( pc_token_list **tokenlist )
-	: AIGenericNode{ ACTION_NODE, nullptr }, params()
+static std::shared_ptr<AIActionNode> ParseActionNode( pc_token_list **tokenlist )
 {
 	pc_token_list *current = *tokenlist;
 	pc_token_list *parenBegin;
@@ -899,7 +896,8 @@ AIActionNode::AIActionNode( pc_token_list **tokenlist )
 
 	if ( !current )
 	{
-		throw parseError( "unexpected end of file after line", (*tokenlist)->token.line );
+		Log::Warn( "Parse error: unexpected end of file after line %i", (*tokenlist)->token.line );
+		return nullptr;
 	}
 
 	action = (struct AIActionMap_s*) bsearch( current->token.string, AIActions, ARRAY_LEN( AIActions ), sizeof( *AIActions ), cmdcmp );
@@ -907,52 +905,54 @@ AIActionNode::AIActionNode( pc_token_list **tokenlist )
 	if ( !action )
 	{
 		*tokenlist = current;
-		throw parseError( "invalid action" + current->token.line );
+		Log::Warn( "Parse error: invalid action \"%s\" on line %i", current->token.string, current->token.line );
+		return nullptr;
 	}
 
 	parenBegin = current->next;
-
-	run = action->run;
 
 	// allow dropping of parenthesis if we don't require any parameters
 	if ( action->minparams == 0 && parenBegin->token.string[0] != '(' )
 	{
 		*tokenlist = parenBegin;
-		return;
+		return std::make_shared<AIActionNode>( action->run, std::vector<AIValue_t>() );
 	}
 
-	params = parseFunctionParameters( &current, action->minparams, action->maxparams );
+	auto params = parseFunctionParameters( &current, action->minparams, action->maxparams );
 
 	if ( params.size() == 0 && action->minparams > 0 )
 	{
-		throw parseError("could not parse function parameters", current->prev->token.line);
+		Log::Warn( "Parse error: could not parse function parameters at line %i", current->prev->token.line );
+		return nullptr;
 	}
 
 	*tokenlist = current;
+	return std::make_shared<AIActionNode>( action->run, std::move(params) );
 }
 
 /*
 ======================
-AINodeList constructor
+ParseNodeList constructor
 
-Parses and creates an AINodeList from a token list
+Parses a list of nodes from a token list.
 The token list pointer is modified to point to the beginning of the next node text block after reading
 ======================
 */
 
-AINodeList::AINodeList( AINodeRunner _run, pc_token_list **tokenlist )
-	: AIGenericNode{ SELECTOR_NODE, _run }, list()
+static Util::optional<std::vector<std::shared_ptr<AIGenericNode>>> ParseNodeList( pc_token_list **tokenlist )
 {
-	pc_token_list *current = (*tokenlist)->next; // TODO: check throw works
+	pc_token_list *current = *tokenlist;
+	std::vector<std::shared_ptr<AIGenericNode>> list;
 
 	if ( !expectToken( "{", &current, true ) )
 	{
-		throw parseError( "missing opening {", current->token.line );
+		Log::Warn( "missing opening {", current->token.line );
+		return Util::nullopt;
 	}
 
 	while ( Q_stricmp( current->token.string, "}" ) )
 	{
-		std::shared_ptr<AIGenericNode> node = ReadNode( &current );
+		std::shared_ptr<AIGenericNode> node = ParseNode( &current );
 		if ( node )
 		{
 			list.push_back( node );
@@ -960,135 +960,75 @@ AINodeList::AINodeList( AINodeRunner _run, pc_token_list **tokenlist )
 		else
 		{
 			*tokenlist = current;
-			throw parseError( "could not read a child of a node list", current->token.line );
+			Log::Warn( "Parse error: could not read a child of a node list at line %i", current->token.line );
+			return Util::nullopt;
 		}
 
 		if ( current == nullptr )
 		{
 			*tokenlist = nullptr;
-			return;
+			return Util::nullopt;
 		}
 	}
 
 	*tokenlist = current->next;
+	return list;
 }
 
-static AITreeList *currentList = nullptr;
-
-std::shared_ptr<AIBehaviorTree> ReadBehaviorTree(const char *name, AITreeList *list)
+static std::shared_ptr<AISelectorNode> ParseSelectorNode( pc_token_list **tokenlist )
 {
-	std::string behavior_name = name;
-	currentList = list;
+	expectToken( "selector", tokenlist, true );
 
-	// check if this behavior tree has already been loaded
-	for ( const std::shared_ptr<AIBehaviorTree>& behavior : *currentList )
+	auto list = ParseNodeList( tokenlist );
+	if (list)
 	{
-		if ( behavior->name == behavior_name )
-		{
-			return behavior;
-		}
-	}
-
-	auto behavior = std::make_shared<AIBehaviorTree>( std::move(behavior_name) );
-
-	if ( behavior )
-	{
-		currentList->push_back( behavior );
-	}
-	return behavior;
-}
-
-static std::shared_ptr<AIGenericNode> ReadBehaviorTreeInclude( pc_token_list **tokenlist )
-{
-	pc_token_list *first = *tokenlist;
-	pc_token_list *current = first;
-
-	expectToken( "behavior", &current, true );
-
-	if ( !current )
-	{
-		*tokenlist = current;
-		throw parseError("unexpected end of file while parsing external file");
-	}
-
-	std::shared_ptr<AIBehaviorTree> behavior =
-		ReadBehaviorTree( current->token.string, currentList );
-
-	if ( !behavior->root )
-	{
-		*tokenlist = current->next;
-		throw parseError( "recursive behavior", current->prev->token.line );
-	}
-
-	*tokenlist = current->next;
-	return behavior->root;
-}
-
-/*
-======================
-ReadNode
-
-Parses and creates an AIGenericNode from a token list
-The token list pointer is modified to point to the next node text block after reading
-
-This function delegates the reading to the sub functions
-ReadNodeList, ReadActionNode, and ReadConditionNode depending on the first token in the list
-======================
-*/
-
-std::shared_ptr<AIGenericNode> ReadNode( pc_token_list **tokenlist )
-{
-	pc_token_list *current = *tokenlist;
-	std::shared_ptr<AIGenericNode> node;
-
-	if ( !Q_stricmp( current->token.string, "selector" ) )
-	{
-		node = (std::shared_ptr<AIGenericNode>) std::make_shared<AINodeList>( BotSelectorNode, &current );
-	}
-	else if ( !Q_stricmp( current->token.string, "sequence" ) )
-	{
-		node = (std::shared_ptr<AIGenericNode>) std::make_shared<AINodeList>( BotSequenceNode, &current );
-	}
-	else if ( !Q_stricmp( current->token.string, "concurrent" ) )
-	{
-		node = (std::shared_ptr<AIGenericNode>) std::make_shared<AINodeList>( BotConcurrentNode, &current );
-	}
-	else if ( !Q_stricmp( current->token.string, "action" ) )
-	{
-		node = (std::shared_ptr<AIGenericNode>) std::make_shared<AIActionNode>( &current );
-	}
-	else if ( !Q_stricmp( current->token.string, "condition" ) )
-	{
-		node = (std::shared_ptr<AIGenericNode>) std::make_shared<AIConditionNode>( &current );
-	}
-	else if ( !Q_stricmp( current->token.string, "decorator" ) )
-	{
-		node = (std::shared_ptr<AIGenericNode>) std::make_shared<AIDecoratorNode>( &current );
-	}
-	else if ( !Q_stricmp( current->token.string, "behavior" ) )
-	{
-		node = ReadBehaviorTreeInclude( &current );
+		return std::make_shared<AISelectorNode>( std::move(*list) );
 	}
 	else
 	{
-		throw parseError( "invalid token found", current->token.line );
+		return nullptr;
 	}
+}
 
-	*tokenlist = current;
-	return node;
+static std::shared_ptr<AISequenceNode> ParseSequenceNode( pc_token_list **tokenlist )
+{
+	expectToken( "sequence", tokenlist, true );
+
+	auto list = ParseNodeList( tokenlist );
+	if (list)
+	{
+		return std::make_shared<AISequenceNode>( std::move(*list) );
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
+static std::shared_ptr<AIConcurrentNode> ParseConcurrentNode( pc_token_list **tokenlist )
+{
+	expectToken( "concurrent", tokenlist, true );
+
+	auto list = ParseNodeList( tokenlist );
+	if (list)
+	{
+		return std::make_shared<AIConcurrentNode>( std::move(*list) );
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
 /*
 ======================
-AIBehaviorTree constructor
+ParseBehaviorTree
 
 Load a behavior tree of the given name from a file
 ======================
 */
 
-AIBehaviorTree::AIBehaviorTree( std::string _name )
-	: AIGenericNode{ BEHAVIOR_NODE, BotBehaviorNode },
-	  name(std::move(_name)), root(nullptr)
+std::shared_ptr<AIBehaviorTree> ParseBehaviorTree( std::string name )
 {
 	char treefilename[ MAX_QPATH ];
 	int handle;
@@ -1181,17 +1121,134 @@ AIBehaviorTree::AIBehaviorTree( std::string _name )
 	handle = Parse_LoadSourceHandle( treefilename );
 	if ( !handle )
 	{
-		throw "cannot load behavior tree: File not found";
+		Log::Warn( "Cannot load behavior tree: File not found" );
+		return nullptr;
 	}
 
 	tokenlist = CreateTokenList( handle );
 	Parse_FreeSourceHandle( handle );
 
-	root = ReadNode( &tokenlist );
+	auto root = ParseNode( &tokenlist );
 	FreeTokenList( tokenlist );
 	if ( !root ) {
-		throw "could not parse behavior tree root node";
+		Log::Warn( "Could not parse behavior tree root node" );
+		return nullptr;
 	}
+
+	return std::make_shared<AIBehaviorTree>( std::move(name), root );
+}
+
+static AITreeList *currentList = nullptr;
+
+std::shared_ptr<AIBehaviorTree> ReadBehaviorTree(const char *name, AITreeList *list)
+{
+	std::string behavior_name = name;
+	currentList = list;
+
+	// check if this behavior tree has already been loaded
+	for ( const std::shared_ptr<AIBehaviorTree>& behavior : *currentList )
+	{
+		if ( behavior->name == behavior_name )
+		{
+			return behavior;
+		}
+	}
+
+	auto behavior = ParseBehaviorTree( std::move(behavior_name) );
+
+	if ( behavior )
+	{
+		currentList->push_back( behavior );
+	}
+	return behavior;
+}
+
+static std::shared_ptr<AIBehaviorTree> ReadBehaviorTreeInclude( pc_token_list **tokenlist )
+{
+	pc_token_list *first = *tokenlist;
+	pc_token_list *current = first;
+
+	expectToken( "behavior", &current, true );
+
+	if ( !current )
+	{
+		*tokenlist = current;
+		Log::Warn( "Parse error: unexpected end of file while parsing imported behavior tree" );
+		return nullptr;
+	}
+
+	std::shared_ptr<AIBehaviorTree> behavior =
+		ReadBehaviorTree( current->token.string, currentList );
+
+	/*
+	if ( !behavior->root )
+	{
+		*tokenlist = current->next;
+		Log::Warn( "Parse error: recursive behavior on line %i", current->prev->token.line );
+		return nullptr;
+	}
+	FIXME
+	*/
+
+	*tokenlist = current->next;
+	return behavior;
+}
+
+/*
+======================
+ParseNode
+
+Parses and creates an AIGenericNode from a token list
+The token list pointer is modified to point to the next node text block after
+reading
+
+This function delegates the reading to the sub functions
+ParseActionNode, ParseConditionNode, etc. depending on the first token in the
+list
+======================
+*/
+
+std::shared_ptr<AIGenericNode> ParseNode( pc_token_list **tokenlist )
+{
+	pc_token_list *current = *tokenlist;
+	std::shared_ptr<AIGenericNode> node;
+
+	if ( !Q_stricmp( current->token.string, "selector" ) )
+	{
+		node = (std::shared_ptr<AIGenericNode>) ParseSelectorNode( &current );
+	}
+	else if ( !Q_stricmp( current->token.string, "sequence" ) )
+	{
+		node = (std::shared_ptr<AIGenericNode>) ParseSequenceNode( &current );
+	}
+	else if ( !Q_stricmp( current->token.string, "concurrent" ) )
+	{
+		node = (std::shared_ptr<AIGenericNode>) ParseConcurrentNode( &current );
+	}
+	else if ( !Q_stricmp( current->token.string, "action" ) )
+	{
+		node = (std::shared_ptr<AIGenericNode>) ParseActionNode( &current );
+	}
+	else if ( !Q_stricmp( current->token.string, "condition" ) )
+	{
+		node = (std::shared_ptr<AIGenericNode>) ParseConditionNode( &current );
+	}
+	else if ( !Q_stricmp( current->token.string, "decorator" ) )
+	{
+		node = (std::shared_ptr<AIGenericNode>) ParseDecoratorNode( &current );
+	}
+	else if ( !Q_stricmp( current->token.string, "behavior" ) )
+	{
+		node = (std::shared_ptr<AIGenericNode>) ReadBehaviorTreeInclude( &current );
+	}
+	else
+	{
+		Log::Warn( "Parse error: invalid token found on line %i", current->token.line );
+		return nullptr;
+	}
+
+	*tokenlist = current;
+	return node;
 }
 
 pc_token_list *CreateTokenList( int handle )

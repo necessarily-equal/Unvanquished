@@ -24,471 +24,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "sg_bot_ai.h"
+#include "sg_bot_behavior_tree.h"
 #include "sg_bot_util.h"
 #include "Entities.h"
-
-/*
-======================
-g_bot_ai.c
-
-This file contains the implementation of the different behavior tree nodes
-
-On each frame, the behavior tree for each bot is evaluated starting from the root node
-Each node returns either STATUS_SUCCESS, STATUS_RUNNING, or STATUS_FAILURE depending on their logic
-The return values are used in various sequences and selectors to change the execution of the tree
-======================
-*/
-
-bool isBinaryOp( AIOpType_t op )
-{
-	switch ( op )
-	{
-		case OP_GREATERTHAN:
-		case OP_GREATERTHANEQUAL:
-		case OP_LESSTHAN:
-		case OP_LESSTHANEQUAL:
-		case OP_EQUAL:
-		case OP_NEQUAL:
-		case OP_AND:
-		case OP_OR:
-			return true;
-		default: return false;
-	}
-}
-
-bool isUnaryOp( AIOpType_t op )
-{
-	return op == OP_NOT;
-}
-
-AIValue_t::AIValue_t(bool b)
-	: AIValue_t( (int) b )
-{
-}
-
-AIValue_t::AIValue_t(int i) : valType(VALUE_INT)
-{
-	l.intValue = i;
-}
-
-AIValue_t::AIValue_t(float f) : valType(VALUE_FLOAT)
-{
-	l.floatValue = f;
-}
-
-AIValue_t::AIValue_t(const char *s) : valType(VALUE_STRING)
-{
-	l.stringValue = BG_strdup(s);
-}
-
-AIValue_t::AIValue_t(const AIValue_t& other) : valType(other.valType)
-{
-	switch ( other.valType )
-	{
-		case VALUE_INT:
-			l.intValue = other.l.intValue;
-			break;
-		case VALUE_FLOAT:
-			l.floatValue = other.l.floatValue;
-			break;
-		case VALUE_STRING:
-			l.stringValue = BG_strdup(other.l.stringValue);
-			break;
-		default:
-			ASSERT_UNREACHABLE();
-	}
-}
-
-AIValue_t::AIValue_t(AIValue_t&& other) : valType(other.valType)
-{
-	switch ( other.valType )
-	{
-		case VALUE_INT:
-			l.intValue = other.l.intValue;
-			break;
-		case VALUE_FLOAT:
-			l.floatValue = other.l.floatValue;
-			break;
-		case VALUE_STRING:
-			l.stringValue = other.l.stringValue;
-			other.l.stringValue = nullptr;
-			break;
-		default:
-			ASSERT_UNREACHABLE();
-	}
-}
-
-AIValue_t::operator bool() const
-{
-	return (float)*this != 0.0f;
-}
-
-AIValue_t::operator int() const
-{
-	switch ( valType )
-	{
-		case VALUE_FLOAT:
-			return ( int ) l.floatValue;
-		case VALUE_INT:
-			return l.intValue;
-		default:
-			return 0;
-	}
-}
-
-AIValue_t::operator float() const
-{
-	switch ( valType )
-	{
-		case VALUE_FLOAT:
-			return l.floatValue;
-		case VALUE_INT:
-			return ( float ) l.intValue;
-		default:
-			return 0.0f;
-	}
-}
-
-AIValue_t::operator double() const
-{
-	return (double) (float) *this;
-}
-
-AIValue_t::operator const char *() const
-{
-	const static char empty[] = "";
-
-	switch ( valType )
-	{
-		case VALUE_FLOAT:
-			return va( "%f", l.floatValue );
-		case VALUE_INT:
-			return va( "%d", l.intValue );
-		case VALUE_STRING:
-			return l.stringValue;
-		default:
-			return empty;
-	}
-}
-
-AIValue_t::~AIValue_t()
-{
-	switch ( valType )
-	{
-		case VALUE_STRING:
-			BG_Free( l.stringValue );
-			break;
-		default:
-			break;
-	}
-}
-
-botEntityAndDistance_t AIEntityToGentity( gentity_t *self, AIEntity_t e )
-{
-	static const botEntityAndDistance_t nullEntity = { nullptr, HUGE_QFLT };
-	botEntityAndDistance_t              ret = nullEntity;
-
-	if ( e > E_NONE && e < E_NUM_BUILDABLES )
-	{
-		return self->botMind->closestBuildings[ e ];
-	}
-	else if ( e == E_ENEMY )
-	{
-		return self->botMind->bestEnemy;
-	}
-	else if ( e == E_DAMAGEDBUILDING )
-	{
-		return self->botMind->closestDamagedBuilding;
-	}
-	else if ( e == E_GOAL )
-	{
-		ret.ent = self->botMind->goal.ent;
-		ret.distance = DistanceToGoal( self );
-		return ret;
-	}
-	else if ( e == E_SELF )
-	{
-		ret.ent = self;
-		ret.distance = 0;
-		return ret;
-	}
-
-	return ret;
-}
-
-static bool NodeIsRunning( gentity_t *self, AIGenericNode *node )
-{
-	int i;
-	for ( i = 0; i < self->botMind->numRunningNodes; i++ )
-	{
-		if ( self->botMind->runningNodes[ i ] == node )
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-/*
-======================
-Sequences and Selectors
-
-A sequence or selector contains a list of child nodes which are evaluated
-based on a combination of the child node return values and the internal logic
-of the sequence or selector
-
-A selector evaluates its child nodes like an if ( ) else if ( ) loop
-It starts at the first child node, and if the node did not fail, it returns its status
-if the node failed, it evaluates the next child node in the list
-A selector will fail if all of its child nodes fail
-
-A sequence evaluates its child nodes like a series of statements
-It starts at the first previously running child node, and if the node does not succeed, it returns its status
-If the node succeeded, it evaluates the next child node in the list
-A sequence will succeed if all of its child nodes succeed
-
-A concurrent node will always evaluate all of its child nodes unless one fails
-if one fails, the concurrent node will stop executing nodes and return failure
-A concurrent node succeeds if none of its child nodes fail
-======================
-*/
-AINodeStatus_t BotSelectorNode( gentity_t *self, AIGenericNode *node )
-{
-	AINodeList *selector = ( AINodeList * ) node;
-
-	for ( const std::shared_ptr<AIGenericNode>& node : selector->list )
-	{
-		AINodeStatus_t status = BotEvaluateNode( self, node.get() );
-		if ( status == STATUS_FAILURE )
-		{
-			continue;
-		}
-		return status;
-	}
-	return STATUS_FAILURE;
-}
-
-AINodeStatus_t BotSequenceNode( gentity_t *self, AIGenericNode *node )
-{
-	AINodeList *sequence = ( AINodeList * ) node;
-	size_t i;
-
-	// find a previously running node and start there
-	for ( i = sequence->list.size() - 1; i > 0; i-- )
-	{
-		if ( NodeIsRunning( self, sequence->list[ i ].get() ) )
-		{
-			break;
-		}
-	}
-
-	for ( ; i < sequence->list.size(); i++ )
-	{
-		AINodeStatus_t status = BotEvaluateNode( self, sequence->list[ i ].get() );
-		if ( status == STATUS_FAILURE )
-		{
-			return STATUS_FAILURE;
-		}
-
-		if ( status == STATUS_RUNNING )
-		{
-			return STATUS_RUNNING;
-		}
-	}
-	return STATUS_SUCCESS;
-}
-
-AINodeStatus_t BotConcurrentNode( gentity_t *self, AIGenericNode *node )
-{
-	AINodeList *con = ( AINodeList * ) node;
-	size_t i;
-
-	for ( i=0; i < con->list.size(); i++ )
-	{
-		AINodeStatus_t status = BotEvaluateNode( self, con->list[ i ].get() );
-
-		if ( status == STATUS_FAILURE )
-		{
-			return STATUS_FAILURE;
-		}
-	}
-	return STATUS_SUCCESS;
-}
-
-/*
-======================
-Decorators
-
-Decorators are used to add functionality to the child node
-======================
-*/
-AINodeStatus_t BotDecoratorTimer( gentity_t *self, AIGenericNode *node )
-{
-	AIDecoratorNode *dec = ( AIDecoratorNode * ) node;
-
-	if ( level.time > dec->data[ self->s.number ] )
-	{
-		AINodeStatus_t status = BotEvaluateNode( self, dec->child.get() );
-
-		if ( status == STATUS_FAILURE )
-		{
-			dec->data[ self->s.number ] = level.time + (int)dec->params[ 0 ];
-		}
-
-		return status;
-	}
-
-	return STATUS_FAILURE;
-}
-
-AINodeStatus_t BotDecoratorReturn( gentity_t *self, AIGenericNode *node )
-{
-	AIDecoratorNode *dec = ( AIDecoratorNode * ) node;
-
-	AINodeStatus_t status = (AINodeStatus_t) (int) dec->params[ 0 ];
-
-	BotEvaluateNode( self, dec->child.get() );
-	return status;
-}
-
-AIValue_t AIBinaryOp_t::eval( gentity_t *self ) const
-{
-	bool success = false;
-	switch ( opType )
-	{
-		case OP_LESSTHAN:
-			success = (double) exp1->eval( self ) <  (double) exp2->eval( self );
-			break;
-		case OP_LESSTHANEQUAL:
-			success = (double) exp1->eval( self ) <= (double) exp2->eval( self );
-			break;
-		case OP_GREATERTHAN:
-			success = (double) exp1->eval( self ) >  (double) exp2->eval( self );
-			break;
-		case OP_GREATERTHANEQUAL:
-			success = (double) exp1->eval( self ) >= (double) exp2->eval( self );
-			break;
-		case OP_EQUAL:
-			success = (double) exp1->eval( self ) == (double) exp2->eval( self );
-			break;
-		case OP_NEQUAL:
-			success = (double) exp1->eval( self ) != (double) exp2->eval( self );
-			break;
-		case OP_AND:
-			success = (bool) exp1->eval( self ) && (bool) exp2->eval( self );
-			break;
-		case OP_OR:
-			success = (bool) exp1->eval( self ) || (bool) exp2->eval( self );
-			break;
-		default:
-			success = false;
-			ASSERT_UNREACHABLE();
-			break;
-	}
-	return AIValue_t( success );
-}
-
-AIValue_t AIUnaryOp_t::eval( gentity_t *self ) const
-{
-	ASSERT_EQ(opType, OP_NOT);
-	return AIValue_t( !(bool)exp->eval( self ) );
-}
-
-/*
-======================
-BotConditionNode
-
-Runs the child node if the condition expression is true
-If there is no child node, returns success if the conditon expression is true
-returns failure otherwise
-======================
-*/
-AINodeStatus_t BotConditionNode( gentity_t *self, AIGenericNode *node )
-{
-	AIConditionNode *con = ( AIConditionNode * ) node;
-
-	bool success = (bool) con->exp->eval( self );
-	if ( success )
-	{
-		if ( con->child )
-		{
-			return BotEvaluateNode( self, con->child.get() );
-		}
-		else
-		{
-			return STATUS_SUCCESS;
-		}
-	}
-
-	return STATUS_FAILURE;
-}
-
-/*
-======================
-BotBehaviorNode
-
-Runs the root node of a behavior tree
-A behavior tree may contain multiple other behavior trees which are run in this way
-======================
-*/
-AINodeStatus_t BotBehaviorNode( gentity_t *self, AIGenericNode *node )
-{
-	AIBehaviorTree *tree = ( AIBehaviorTree * ) node;
-	return BotEvaluateNode( self, tree->root.get() );
-}
-
-/*
-======================
-BotEvaluateNode
-
-Generic node running routine that properly handles
-running information for sequences and selectors
-This should always be used instead of the node->run function pointer
-======================
-*/
-AINodeStatus_t BotEvaluateNode( gentity_t *self, AIGenericNode *node )
-{
-	AINodeStatus_t status = node->run( self, node );
-
-	// reset the current node if it finishes
-	// we do this so we can re-pathfind on the next entrance
-	if ( ( status == STATUS_SUCCESS || status == STATUS_FAILURE ) && self->botMind->currentNode == node )
-	{
-		self->botMind->currentNode = nullptr;
-	}
-
-	// reset running information on node success so sequences and selectors reset their state
-	if ( NodeIsRunning( self, node ) && status == STATUS_SUCCESS )
-	{
-		memset( self->botMind->runningNodes, 0, sizeof( self->botMind->runningNodes ) );
-		self->botMind->numRunningNodes = 0;
-	}
-
-	// store running information for sequence nodes and selector nodes
-	if ( status == STATUS_RUNNING )
-	{
-		if ( self->botMind->numRunningNodes == MAX_NODE_DEPTH )
-		{
-			Log::Warn( "MAX_NODE_DEPTH exceeded" );
-			return status;
-		}
-
-		// clear out previous running list when we hit a running leaf node
-		// this insures that only 1 node in a sequence or selector has the running state
-		if ( node->type == ACTION_NODE )
-		{
-			memset( self->botMind->runningNodes, 0, sizeof( self->botMind->runningNodes ) );
-			self->botMind->numRunningNodes = 0;
-		}
-
-		if ( !NodeIsRunning( self, node ) )
-		{
-			self->botMind->runningNodes[ self->botMind->numRunningNodes++ ] = node;
-		}
-	}
-
-	return status;
-}
 
 /*
 ======================
@@ -500,7 +38,7 @@ to the rest of the behavior tree
 ======================
 */
 
-AINodeStatus_t BotActionFireWeapon( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionFireWeapon( gentity_t *self, AIActionNode* )
 {
 	if ( WeaponIsEmpty( BG_GetPlayerWeapon( &self->client->ps ), &self->client->ps ) && self->client->pers.team == TEAM_HUMANS )
 	{
@@ -516,18 +54,16 @@ AINodeStatus_t BotActionFireWeapon( gentity_t *self, AIGenericNode* )
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionTeleport( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionTeleport( gentity_t *self, AIActionNode *node )
 {
-	AIActionNode *action = (AIActionNode *) node;
-	vec3_t pos = { (float) action->params[0], (float) action->params[1], (float) action->params[2] };
+	vec3_t pos = { (float) node->params[0], (float) node->params[1], (float) node->params[2] };
 	VectorCopy( pos,self->client->ps.origin );
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionActivateUpgrade( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionActivateUpgrade( gentity_t *self, AIActionNode *node )
 {
-	AIActionNode *action = (AIActionNode *) node;
-	upgrade_t u = (upgrade_t) (int) action->params[ 0 ];
+	upgrade_t u = (upgrade_t) (int) node->params[ 0 ];
 
 	if ( !BG_UpgradeIsActive( u, self->client->ps.stats ) &&
 		BG_InventoryContainsUpgrade( u, self->client->ps.stats ) )
@@ -537,10 +73,9 @@ AINodeStatus_t BotActionActivateUpgrade( gentity_t *self, AIGenericNode *node )
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionDeactivateUpgrade( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionDeactivateUpgrade( gentity_t *self, AIActionNode *node )
 {
-	AIActionNode *action = (AIActionNode *) node;
-	upgrade_t u = (upgrade_t) (int) action->params[ 0 ];
+	upgrade_t u = (upgrade_t) (int) node->params[ 0 ];
 
 	if ( BG_UpgradeIsActive( u, self->client->ps.stats ) &&
 		BG_InventoryContainsUpgrade( u, self->client->ps.stats ) )
@@ -550,7 +85,7 @@ AINodeStatus_t BotActionDeactivateUpgrade( gentity_t *self, AIGenericNode *node 
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionAimAtGoal( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionAimAtGoal( gentity_t *self, AIActionNode* )
 {
 	if ( BotGetTargetTeam( self->botMind->goal ) != self->client->pers.team )
 	{
@@ -566,13 +101,13 @@ AINodeStatus_t BotActionAimAtGoal( gentity_t *self, AIGenericNode* )
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionMoveToGoal( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionMoveToGoal( gentity_t *self, AIActionNode* )
 {
 	BotMoveToGoal( self );
 	return STATUS_RUNNING;
 }
 
-AINodeStatus_t BotActionMoveInDir( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionMoveInDir( gentity_t *self, AIActionNode *node )
 {
 	AIActionNode *a = (AIActionNode *) node;
 	int dir = (int) a->params[ 0 ];
@@ -584,25 +119,25 @@ AINodeStatus_t BotActionMoveInDir( gentity_t *self, AIGenericNode *node )
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionStrafeDodge( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionStrafeDodge( gentity_t *self, AIActionNode* )
 {
 	BotStrafeDodge( self );
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionAlternateStrafe( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionAlternateStrafe( gentity_t *self, AIActionNode* )
 {
 	BotAlternateStrafe( self );
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionClassDodge( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionClassDodge( gentity_t *self, AIActionNode* )
 {
 	BotClassMovement( self, BotTargetInAttackRange( self, self->botMind->goal ) );
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionChangeGoal( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionChangeGoal( gentity_t *self, AIActionNode *node )
 {
 	AIActionNode *a = (AIActionNode *) node;
 
@@ -632,10 +167,9 @@ AINodeStatus_t BotActionChangeGoal( gentity_t *self, AIGenericNode *node )
 	return STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionEvolveTo( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionEvolveTo( gentity_t *self, AIActionNode *node )
 {
-	AIActionNode *action = (AIActionNode *) node;
-	class_t c = ( class_t ) (int) action->params[ 0 ];
+	class_t c = ( class_t ) (int) node->params[ 0 ];
 
 	if ( self->client->ps.stats[ STAT_CLASS ] == c )
 	{
@@ -650,17 +184,16 @@ AINodeStatus_t BotActionEvolveTo( gentity_t *self, AIGenericNode *node )
 	return STATUS_FAILURE;
 }
 
-AINodeStatus_t BotActionSay( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionSay( gentity_t *self, AIActionNode *node )
 {
-	AIActionNode *action = ( AIActionNode * ) node;
-	const char *str = (const char *) action->params[0];
-	saymode_t say = (saymode_t) (int) action->params[1];
+	const char *str = (const char *) node->params[0];
+	saymode_t say = (saymode_t) (int) node->params[1];
 	G_Say( self, say, str );
 	return STATUS_SUCCESS;
 }
 
 // TODO: Move decision making out of these actions and into the rest of the behavior tree
-AINodeStatus_t BotActionFight( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionFight( gentity_t *self, AIActionNode *node )
 {
 	team_t myTeam = ( team_t ) self->client->pers.team;
 
@@ -789,7 +322,7 @@ AINodeStatus_t BotActionFight( gentity_t *self, AIGenericNode *node )
 	return STATUS_RUNNING;
 }
 
-AINodeStatus_t BotActionFlee( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionFlee( gentity_t *self, AIActionNode *node )
 {
 	if ( node != self->botMind->currentNode )
 	{
@@ -797,7 +330,9 @@ AINodeStatus_t BotActionFlee( gentity_t *self, AIGenericNode *node )
 		{
 			return STATUS_FAILURE;
 		}
+
 		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	if ( !BotTargetIsEntity( self->botMind->goal ) )
@@ -817,7 +352,7 @@ AINodeStatus_t BotActionFlee( gentity_t *self, AIGenericNode *node )
 	return STATUS_RUNNING;
 }
 
-AINodeStatus_t BotActionRoamInRadius( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionRoamInRadius( gentity_t *self, AIActionNode *node )
 {
 	AIActionNode *a = (AIActionNode *) node;
 	AIEntity_t e = (AIEntity_t) (int) a->params[0];
@@ -842,7 +377,9 @@ AINodeStatus_t BotActionRoamInRadius( gentity_t *self, AIGenericNode *node )
 		{
 			return STATUS_FAILURE;
 		}
+
 		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	if ( self->botMind->nav.directPathToGoal && GoalInRange( self, 70 ) )
@@ -857,7 +394,7 @@ AINodeStatus_t BotActionRoamInRadius( gentity_t *self, AIGenericNode *node )
 	return STATUS_RUNNING;
 }
 
-AINodeStatus_t BotActionRoam( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionRoam( gentity_t *self, AIActionNode *node )
 {
 	// we are just starting to roam, get a target location
 	if ( node != self->botMind->currentNode )
@@ -867,7 +404,9 @@ AINodeStatus_t BotActionRoam( gentity_t *self, AIGenericNode *node )
 		{
 			return STATUS_FAILURE;
 		}
+
 		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	if ( self->botMind->nav.directPathToGoal && GoalInRange( self, 70 ) )
@@ -889,7 +428,7 @@ botTarget_t BotGetMoveToTarget( gentity_t *self, AIEntity_t e )
 	return target;
 }
 
-AINodeStatus_t BotActionMoveTo( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionMoveTo( gentity_t *self, AIActionNode *node )
 {
 	float radius = 0;
 	AIActionNode *moveTo = (AIActionNode *) node;
@@ -906,11 +445,9 @@ AINodeStatus_t BotActionMoveTo( gentity_t *self, AIGenericNode *node )
 		{
 			return STATUS_FAILURE;
 		}
-		else
-		{
-			self->botMind->currentNode = node;
-			return STATUS_RUNNING;
-		}
+
+		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	if ( self->botMind->goal.ent )
@@ -937,7 +474,7 @@ AINodeStatus_t BotActionMoveTo( gentity_t *self, AIGenericNode *node )
 	return STATUS_RUNNING;
 }
 
-AINodeStatus_t BotActionRush( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionRush( gentity_t *self, AIActionNode *node )
 {
 	if ( self->botMind->currentNode != node )
 	{
@@ -945,11 +482,9 @@ AINodeStatus_t BotActionRush( gentity_t *self, AIGenericNode *node )
 		{
 			return STATUS_FAILURE;
 		}
-		else
-		{
-			self->botMind->currentNode = node;
-			return STATUS_RUNNING;
-		}
+
+		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	if ( !BotTargetIsEntity( self->botMind->goal ) )
@@ -970,7 +505,7 @@ AINodeStatus_t BotActionRush( gentity_t *self, AIGenericNode *node )
 	return STATUS_RUNNING;
 }
 
-AINodeStatus_t BotActionHeal( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionHeal( gentity_t *self, AIActionNode *node )
 {
 	if ( self->client->pers.team == TEAM_HUMANS )
 	{
@@ -982,24 +517,24 @@ AINodeStatus_t BotActionHeal( gentity_t *self, AIGenericNode *node )
 	}
 }
 
-AINodeStatus_t BotActionSuicide( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionSuicide( gentity_t *self, AIActionNode* )
 {
 	Entities::Kill( self, MOD_SUICIDE );
 	return AINodeStatus_t::STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionJump( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionJump( gentity_t *self, AIActionNode* )
 {
 	return BotJump( self ) ? AINodeStatus_t::STATUS_SUCCESS : AINodeStatus_t::STATUS_FAILURE;
 }
 
-AINodeStatus_t BotActionResetStuckTime( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionResetStuckTime( gentity_t *self, AIActionNode* )
 {
 	BotResetStuckTime( self );
 	return AINodeStatus_t::STATUS_SUCCESS;
 }
 
-AINodeStatus_t BotActionGesture( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionGesture( gentity_t *self, AIActionNode* )
 {
 	usercmd_t *botCmdBuffer = &self->botMind->cmdBuffer;
 	usercmdPressButton( botCmdBuffer->buttons, BUTTON_GESTURE );
@@ -1009,7 +544,7 @@ AINodeStatus_t BotActionGesture( gentity_t *self, AIGenericNode* )
 /*
 	alien specific actions
 */
-AINodeStatus_t BotActionEvolve ( gentity_t *self, AIGenericNode* )
+AINodeStatus_t BotActionEvolve ( gentity_t *self, AIActionNode* )
 {
 	AINodeStatus_t status = STATUS_FAILURE;
 	if ( !g_bot_evolve.integer )
@@ -1072,7 +607,7 @@ AINodeStatus_t BotActionEvolve ( gentity_t *self, AIGenericNode* )
 	return status;
 }
 
-AINodeStatus_t BotActionHealA( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionHealA( gentity_t *self, AIActionNode *node )
 {
 	gentity_t *healTarget = nullptr;
 
@@ -1113,6 +648,7 @@ AINodeStatus_t BotActionHealA( gentity_t *self, AIGenericNode *node )
 		}
 
 		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	//we are fully healed now
@@ -1142,7 +678,7 @@ AINodeStatus_t BotActionHealA( gentity_t *self, AIGenericNode *node )
 /*
 	human specific actions
 */
-AINodeStatus_t BotActionHealH( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionHealH( gentity_t *self, AIActionNode *node )
 {
 	vec3_t targetPos;
 	vec3_t myPos;
@@ -1165,7 +701,9 @@ AINodeStatus_t BotActionHealH( gentity_t *self, AIGenericNode *node )
 		{
 			return STATUS_FAILURE;
 		}
+
 		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	if ( fullyHealed )
@@ -1203,7 +741,7 @@ AINodeStatus_t BotActionHealH( gentity_t *self, AIGenericNode *node )
 	}
 	return STATUS_RUNNING;
 }
-AINodeStatus_t BotActionRepair( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionRepair( gentity_t *self, AIActionNode *node )
 {
 	vec3_t forward;
 	vec3_t targetPos;
@@ -1215,7 +753,9 @@ AINodeStatus_t BotActionRepair( gentity_t *self, AIGenericNode *node )
 		{
 			return STATUS_FAILURE;
 		}
+
 		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	if ( !BotTargetIsEntity( self->botMind->goal ) )
@@ -1257,14 +797,13 @@ AINodeStatus_t BotActionRepair( gentity_t *self, AIGenericNode *node )
 	}
 	return STATUS_RUNNING;
 }
-AINodeStatus_t BotActionBuy( gentity_t *self, AIGenericNode *node )
+AINodeStatus_t BotActionBuy( gentity_t *self, AIActionNode *node )
 {
-	AIActionNode *buy = ( AIActionNode * ) node;
 	weapon_t  weapon;
 	upgrade_t upgrades[4];
 	int numUpgrades;
 
-	if ( buy->params.size() == 0 )
+	if ( node->params.size() == 0 )
 	{
 		// equip action
 		BotGetDesiredBuy( self, &weapon, upgrades, &numUpgrades );
@@ -1272,7 +811,7 @@ AINodeStatus_t BotActionBuy( gentity_t *self, AIGenericNode *node )
 	else
 	{
 		// first parameter should always be a weapon
-		weapon = ( weapon_t ) (int) buy->params[ 0 ];
+		weapon = ( weapon_t ) (int) node->params[ 0 ];
 
 		if ( weapon < WP_NONE || weapon >= WP_NUM_WEAPONS )
 		{
@@ -1283,9 +822,9 @@ AINodeStatus_t BotActionBuy( gentity_t *self, AIGenericNode *node )
 		numUpgrades = 0;
 
 		// other parameters are always upgrades
-		for ( size_t i = 1; i < buy->params.size(); i++ )
+		for ( size_t i = 1; i < node->params.size(); i++ )
 		{
-			upgrades[ numUpgrades ] = (upgrade_t) (int) buy->params[ i ];
+			upgrades[ numUpgrades ] = (upgrade_t) (int) node->params[ i ];
 
 			if ( upgrades[ numUpgrades ] <= UP_NONE || upgrades[ numUpgrades ] >= UP_NUM_UPGRADES )
 			{
@@ -1342,7 +881,9 @@ AINodeStatus_t BotActionBuy( gentity_t *self, AIGenericNode *node )
 		{
 			return STATUS_FAILURE;
 		}
+
 		self->botMind->currentNode = node;
+		return STATUS_RUNNING;
 	}
 
 	if ( !BotTargetIsEntity( self->botMind->goal ) )
@@ -1393,4 +934,37 @@ AINodeStatus_t BotActionBuy( gentity_t *self, AIGenericNode *node )
 
 	BotMoveToGoal( self );
 	return STATUS_RUNNING;
+}
+
+/*
+======================
+Decorators
+
+Decorators are used to add functionality to the child node
+======================
+*/
+AINodeStatus_t BotDecoratorTimer( gentity_t *self, AIDecoratorNode *node )
+{
+	if ( level.time > node->data[ self->s.number ] )
+	{
+		AINodeStatus_t status = node->child->run( self );
+
+		if ( status == STATUS_FAILURE )
+		{
+			node->data[ self->s.number ] = level.time + (int)node->params[ 0 ];
+		}
+
+		return status;
+	}
+
+	return STATUS_FAILURE;
+}
+
+AINodeStatus_t BotDecoratorReturn( gentity_t *self, AIDecoratorNode *node )
+{
+	node->child->run( self );
+
+	// force return status
+	AINodeStatus_t status = (AINodeStatus_t) (int) node->params[ 0 ];
+	return status;
 }

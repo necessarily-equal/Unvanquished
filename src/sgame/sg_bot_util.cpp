@@ -2142,3 +2142,36 @@ void BotCalculateStuckTime( gentity_t *self )
 	}
 	self->botMind->lastThink = level.time;
 }
+
+botEntityAndDistance_t AIEntityToGentity( gentity_t *self, AIEntity_t e )
+{
+	static const botEntityAndDistance_t nullEntity = { nullptr, HUGE_QFLT };
+	botEntityAndDistance_t              ret = nullEntity;
+
+	if ( e > E_NONE && e < E_NUM_BUILDABLES )
+	{
+		return self->botMind->closestBuildings[ e ];
+	}
+	else if ( e == E_ENEMY )
+	{
+		return self->botMind->bestEnemy;
+	}
+	else if ( e == E_DAMAGEDBUILDING )
+	{
+		return self->botMind->closestDamagedBuilding;
+	}
+	else if ( e == E_GOAL )
+	{
+		ret.ent = self->botMind->goal.ent;
+		ret.distance = DistanceToGoal( self );
+		return ret;
+	}
+	else if ( e == E_SELF )
+	{
+		ret.ent = self;
+		ret.distance = 0;
+		return ret;
+	}
+
+	return ret;
+}
