@@ -243,62 +243,99 @@ AIValue_t AIUnaryOp_t::eval( gentity_t *bot ) const
 	return AIValue_t( !(bool)exp->eval( bot ) );
 }
 
-
 /*
 ======================
 Generic Node
 ======================
 */
 
-bool AIGenericNode::isRunning(gentity_t *bot) const
+bool AIGenericNode::isRunning(gentity_t *bot, BTMemory &mem) const
 {
 	return runningStates[bot->s.number];
 }
 
-void AIGenericNode::forceStop(gentity_t *bot)
+void AIGenericNode::setRunning(gentity_t *bot, BTMemory &runningNodes, bool running)
 {
-	runningStates[bot->s.number] = false;
-}
+	bool previously_running = runningStates[bot->s.number];
+	runningStates[bot->s.number] = running;
 
-/*
-======================
-BotEvaluateNode
-
-Generic node running routine that properly handles
-running information for sequences and selectors
-This should always be used instead of node->eval
-======================
-*/
-AINodeStatus_t AIGenericNode::run(gentity_t *bot)
-{
-	AINodeStatus_t status = this->eval( bot );
-	runningStates[bot->s.number] = status == STATUS_RUNNING;
+	printf("\n## running: %i, previously_running: %i\n\n", running, previously_running);//FIXME
 
 	// reset the current node if it finishes
 	// we do this so we can re-pathfind on the next entrance
-	if ( ( status == STATUS_SUCCESS || status == STATUS_FAILURE )
-			&& bot->botMind->currentNode == this )
+	if ( !running && bot->botMind->currentNode == this )
 	{
 		bot->botMind->currentNode = nullptr;
 	}
 
-	/*
-AINodeStatus_t BotEvaluateNode( gentity_t *bot, AIGenericNode *node )
-{
-//	// store running information for sequence nodes and selector nodes
-//	if ( status == STATUS_RUNNING )
-//	{
-//		// clear out previous running list when we hit a running leaf node
-//		// this insures that only 1 node in a sequence or selector has the running state
-//		printf("numRunningNodes: %i\n", (int) bot->botMind->numRunningNodes);
-//
-//		if ( !NodeIsRunning( bot, node ) )
-//		{
-//			ASSERT(bot->botMind->numRunningNodes < (int) ARRAY_LEN(bot->botMind->runningNodes));
-//			bot->botMind->runningNodes[ bot->botMind->numRunningNodes++ ] = node;
-//		}
-//	}
+	if ( previously_running && !running )
+	{
+		//ASSERT(runningNodes.size() > 0);
+		for (auto i = runningNodes.begin(); i != runningNodes.end(); ++i)
+		{
+			if (*i == this)
+			{
+				runningNodes.erase(i);
+				break;
+			}
+		}
+	}
+	else if ( !previously_running && running )
+	{
+		ASSERT(runningNodes.size() < 200);
+		runningNodes.push_back(this);
+	}
+/*TODO: delete this comment
+       // reset running information on node success so sequences and selectors reset their state
+       if ( NodeIsRunning( self, node ) && status == STATUS_SUCCESS )
+       {
+               memset( self->botMind->runningNodes, 0, sizeof( self->botMind->runningNodes ) );
+               self->botMind->numRunningNodes = 0;
+       }
+
+       // store running information for sequence nodes and selector nodes
+       if ( status == STATUS_RUNNING )
+       {
+               // clear out previous running list when we hit a running leaf node
+               // this insures that only 1 node in a sequence or selector has the running state
+               if ( node->type == ACTION_NODE )
+               {
+                       memset( self->botMind->runningNodes, 0, sizeof( self->botMind->runningNodes ) );
+                       self->botMind->numRunningNodes = 0;
+               }
+
+               if ( !NodeIsRunning( self, node ) )
+               {
+                       self->botMind->runningNodes[ self->botMind->numRunningNodes++ ] = node;
+               }
+       }
 */
+}
+
+/*
+======================
+AIBehaviorTree::eval
+
+This is the interface that should be used from outside the behavior tree.
+======================
+*/
+void AIBehaviorTree::eval(gentity_t *bot)
+{
+	this->run( bot, memory );
+}
+
+/*
+======================
+AIBehaviorTree::run
+
+Generic node running routine that properly handles
+running information for sequences and selectors
+======================
+*/
+AINodeStatus_t AIGenericNode::run(gentity_t *bot, std::vector<AIGenericNode*> &running_nodes)
+{
+	AINodeStatus_t status = this->exec( bot, running_nodes );
+	setRunning(bot, running_nodes, status == STATUS_RUNNING);
 	return status;
 }
 
@@ -338,11 +375,11 @@ AISelectorNode::AISelectorNode(
 {
 }
 
-AINodeStatus_t AISelectorNode::eval( gentity_t *bot )
+AINodeStatus_t AISelectorNode::exec( gentity_t *bot, BTMemory &mem )
 {
 	for ( const std::shared_ptr<AIGenericNode>& node : list )
 	{
-		AINodeStatus_t status = node->run( bot );
+		AINodeStatus_t status = node->run( bot, mem );
 		if ( status == STATUS_FAILURE )
 		{
 			continue;
@@ -352,7 +389,7 @@ AINodeStatus_t AISelectorNode::eval( gentity_t *bot )
 			// cleanup
 			for ( auto node : list )
 			{
-				node->forceStop(bot);
+				node->setRunning(bot, mem, false);
 			}
 		}
 		return status;
@@ -367,14 +404,14 @@ AISequenceNode::AISequenceNode(
 {
 }
 
-AINodeStatus_t AISequenceNode::eval( gentity_t *bot )
+AINodeStatus_t AISequenceNode::exec( gentity_t *bot, BTMemory &mem )
 {
 	size_t i;
 
 	// find a previously running node and start there
 	for ( i = list.size() - 1; i > 0; i-- )
 	{
-		if ( list[ i ]->isRunning( bot ) )
+		if ( list[ i ]->isRunning( bot, mem ) )
 		{
 			break;
 		}
@@ -382,7 +419,7 @@ AINodeStatus_t AISequenceNode::eval( gentity_t *bot )
 
 	for ( ; i < list.size(); i++ )
 	{
-		AINodeStatus_t status = list[ i ]->run( bot );
+		AINodeStatus_t status = list[ i ]->run( bot, mem );
 		if ( status == STATUS_FAILURE )
 		{
 			return STATUS_FAILURE;
@@ -397,7 +434,7 @@ AINodeStatus_t AISequenceNode::eval( gentity_t *bot )
 	// cleanup
 	for ( auto node : list )
 	{
-		node->forceStop(bot);
+		node->setRunning(bot, mem, false);
 	}
 	return STATUS_SUCCESS;
 }
@@ -408,11 +445,11 @@ AIConcurrentNode::AIConcurrentNode(
 {
 }
 
-AINodeStatus_t AIConcurrentNode::eval( gentity_t *bot )
+AINodeStatus_t AIConcurrentNode::exec( gentity_t *bot, BTMemory &mem )
 {
 	for ( const std::shared_ptr<AIGenericNode>& node : list )
 	{
-		AINodeStatus_t status = node->run( bot );
+		AINodeStatus_t status = node->run( bot, mem );
 
 		if ( status == STATUS_FAILURE )
 		{
@@ -438,9 +475,9 @@ AIDecoratorNode::AIDecoratorNode( AIDecoratorRunner _f,
 {
 }
 
-AINodeStatus_t AIDecoratorNode::eval( gentity_t *bot )
+AINodeStatus_t AIDecoratorNode::exec( gentity_t *bot, BTMemory &mem )
 {
-	return f( bot, this );
+	return f( bot, mem, this );
 }
 
 /*
@@ -450,7 +487,7 @@ Actions
 Actions are the leaves of the tree, they allow the tree to do something
 ======================
 */
-AINodeStatus_t AIActionNode::eval( gentity_t *bot )
+AINodeStatus_t AIActionNode::exec( gentity_t *bot, BTMemory &mem )
 {
 	return f( bot, this );
 }
@@ -489,14 +526,14 @@ AIConditionNode::AIConditionNode( std::unique_ptr<AIExpression_t> _exp, std::sha
 {
 }
 
-AINodeStatus_t AIConditionNode::eval( gentity_t *bot )
+AINodeStatus_t AIConditionNode::exec( gentity_t *bot, BTMemory &mem )
 {
 	bool success = (bool) exp->eval( bot );
 	if ( success )
 	{
 		if ( child )
 		{
-			return child->run( bot );
+			return child->run( bot, mem );
 		}
 		else
 		{

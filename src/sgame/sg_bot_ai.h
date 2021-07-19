@@ -29,8 +29,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define __BOT_AI_HEADER
 
 // decorator nodes
-AINodeStatus_t BotDecoratorTimer( gentity_t *self, AIDecoratorNode *node );
-AINodeStatus_t BotDecoratorReturn( gentity_t *self, AIDecoratorNode *node );
+AINodeStatus_t BotDecoratorTimer( gentity_t *self, BTMemory &mem, AIDecoratorNode *node );
+AINodeStatus_t BotDecoratorReturn( gentity_t *self, BTMemory &mem, AIDecoratorNode *node );
 
 // action nodes
 AINodeStatus_t BotActionChangeGoal( gentity_t *self, AIActionNode *node );

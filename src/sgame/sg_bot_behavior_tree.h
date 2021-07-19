@@ -177,17 +177,20 @@ bool isUnaryOp( AIOpType_t op );
 
 struct AIDecoratorNode;
 struct AIActionNode;
-using AIDecoratorRunner = AINodeStatus_t(*)( gentity_t *, AIDecoratorNode * );
+struct AIGenericNode;
+using BTMemory = std::vector<AIGenericNode*>;
+using AIDecoratorRunner = AINodeStatus_t(*)( gentity_t *, BTMemory &, AIDecoratorNode * );
 using AIActionRunner    = AINodeStatus_t(*)( gentity_t *, AIActionNode * );
+
 
 class AIGenericNode
 {
 public:
-	AINodeStatus_t run(gentity_t *bot);
-	bool isRunning(gentity_t *bot) const;
-	void forceStop(gentity_t *bot);
+	AINodeStatus_t run(gentity_t *bot, BTMemory &mem);
+	bool isRunning(gentity_t *bot, BTMemory &mem) const;
+	void setRunning(gentity_t *bot, BTMemory &mem, bool running);
 protected:
-	virtual AINodeStatus_t eval(gentity_t *bot) = 0;
+	virtual AINodeStatus_t exec(gentity_t *bot, BTMemory &mem) = 0;
 private:
 	std::array<bool, MAX_CLIENTS> runningStates;
 };
@@ -203,7 +206,7 @@ public:
 class AISelectorNode : public AINodeList
 {
 protected:
-	AINodeStatus_t eval(gentity_t *bot);
+	AINodeStatus_t exec(gentity_t *bot, BTMemory &mem);
 public:
 	AISelectorNode( std::vector<std::shared_ptr<AIGenericNode>> );
 };
@@ -211,7 +214,7 @@ public:
 class AISequenceNode : public AINodeList
 {
 protected:
-	AINodeStatus_t eval(gentity_t *bot);
+	AINodeStatus_t exec(gentity_t *bot, BTMemory &mem);
 public:
 	AISequenceNode( std::vector<std::shared_ptr<AIGenericNode>> );
 };
@@ -219,7 +222,7 @@ public:
 class AIConcurrentNode : public AINodeList
 {
 protected:
-	AINodeStatus_t eval(gentity_t *bot);
+	AINodeStatus_t exec(gentity_t *bot, BTMemory &mem);
 public:
 	AIConcurrentNode( std::vector<std::shared_ptr<AIGenericNode>> );
 };
@@ -229,9 +232,13 @@ class AIBehaviorTree : public AIGenericNode
 private:
 	//AIBehaviorTree( std::string filename ); // FIXME
 	std::shared_ptr<AIGenericNode> root;
+	BTMemory memory;
 public:
+	void eval(gentity_t *bot);
 	std::string name;
-	AINodeStatus_t eval(gentity_t *bot) { return root->run(bot); }
+	AINodeStatus_t exec(gentity_t *bot, BTMemory &mem) {
+		return root->run(bot, mem);
+	}
 	AIBehaviorTree(std::string name, std::shared_ptr<AIGenericNode> root);
 };
 using AITreeList = std::vector<std::shared_ptr<AIBehaviorTree>>;
@@ -242,7 +249,7 @@ private:
 	std::shared_ptr<AIGenericNode> child;
 	std::unique_ptr<AIExpression_t> exp;
 protected:
-	AINodeStatus_t eval(gentity_t *bot);
+	AINodeStatus_t exec(gentity_t *bot, BTMemory &mem);
 public:
 	AIConditionNode( std::unique_ptr<AIExpression_t>, std::shared_ptr<AIGenericNode> child );
 };
@@ -255,7 +262,7 @@ public:
 	std::shared_ptr<AIGenericNode> child;
 	std::array<int, MAX_CLIENTS> data; // bot specific data
 	std::vector<AIValue_t> params;
-	AINodeStatus_t eval(gentity_t *bot);
+	AINodeStatus_t exec(gentity_t *bot, BTMemory &mem);
 	AIDecoratorNode( AIDecoratorRunner f, std::shared_ptr<AIGenericNode> child, std::vector<AIValue_t> params );
 };
 
@@ -264,7 +271,7 @@ class AIActionNode : public AIGenericNode
 private:
 	AIActionRunner f;
 protected:
-	AINodeStatus_t eval(gentity_t *bot);
+	AINodeStatus_t exec(gentity_t *bot, BTMemory &mem);
 public:
 	std::vector<AIValue_t> params;
 	AIActionNode( AIActionRunner f, std::vector<AIValue_t> params);

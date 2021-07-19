@@ -446,7 +446,7 @@ void G_BotThink( gentity_t *self )
 		//BotClampPos( self );
 	}
 
-	self->botMind->behaviorTree->run( self );
+	self->botMind->behaviorTree->eval( self );
 
 	// if we were nudged...
 	VectorAdd( self->client->ps.velocity, nudge, self->client->ps.velocity );

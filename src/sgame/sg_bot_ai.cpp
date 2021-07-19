@@ -943,11 +943,11 @@ Decorators
 Decorators are used to add functionality to the child node
 ======================
 */
-AINodeStatus_t BotDecoratorTimer( gentity_t *self, AIDecoratorNode *node )
+AINodeStatus_t BotDecoratorTimer( gentity_t *self, BTMemory &mem, AIDecoratorNode *node )
 {
 	if ( level.time > node->data[ self->s.number ] )
 	{
-		AINodeStatus_t status = node->child->run( self );
+		AINodeStatus_t status = node->child->run( self, mem );
 
 		if ( status == STATUS_FAILURE )
 		{
@@ -960,9 +960,9 @@ AINodeStatus_t BotDecoratorTimer( gentity_t *self, AIDecoratorNode *node )
 	return STATUS_FAILURE;
 }
 
-AINodeStatus_t BotDecoratorReturn( gentity_t *self, AIDecoratorNode *node )
+AINodeStatus_t BotDecoratorReturn( gentity_t *self, BTMemory &mem, AIDecoratorNode *node )
 {
-	node->child->run( self );
+	node->child->run( self, mem );
 
 	// force return status
 	AINodeStatus_t status = (AINodeStatus_t) (int) node->params[ 0 ];
