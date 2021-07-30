@@ -52,22 +52,13 @@ gentity_t *G_SelectRandomJuggernaut()
 	return nullptr;
 }
 
-// Mark a client to become juggernaut
+// Cleanly create a juggernaut, this will send messages events and all
 static void G_PromoteJuggernaut( gentity_t *new_juggernaut = nullptr )
 {
 	if (!new_juggernaut)
 		new_juggernaut = G_SelectRandomJuggernaut();
 	if (!new_juggernaut)
 		return;
-
-	new_juggernaut->client->sess.spectatorState = SPECTATOR_NOT;
-	new_juggernaut->client->sess.restartTeam = G_PreyTeam();
-	new_juggernaut->client->pers.classSelection = G_JuggernautClass();
-}
-
-// Cleanly create a juggernaut, this will send messages events and all
-static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
-{
 	Log::Notice("Promoting %p to Juggernaut!", new_juggernaut);
 
 	G_ChangeTeam( new_juggernaut, G_JuggernautTeam() );
@@ -96,6 +87,9 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 
 	//TODO: send messages
 
+	new_juggernaut->client->sess.spectatorState = SPECTATOR_NOT;
+	new_juggernaut->client->pers.classSelection = G_JuggernautClass();
+
 	/* bot */
 	auto model = BG_ClassModelConfig( new_juggernaut->client->pers.classSelection );
 	auto navHandle = model->navMeshClass
@@ -109,59 +103,50 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 	Beacon::Tag( new_juggernaut, G_PreyTeam(), true );
 }
 
-//// Cleanly removes a juggernaut
-//static void G_DemoteJuggernaut( gentity_t *old_juggernaut )
-//{
-//	Log::Notice("Demoting %p from Juggernaut!", old_juggernaut);
-//	old_juggernaut->client->pers.classSelection = PCL_NONE;
-//
-//	ent->client->sess.restartTeam = G_PreyTeam();
-//}
+// Cleanly removes a juggernaut
+static void G_DemoteJuggernaut( gentity_t *old_juggernaut )
+{
+	Log::Notice("Demoting %p from Juggernaut!", old_juggernaut);
+	old_juggernaut->client->pers.classSelection = PCL_NONE;
+
+	G_ChangeTeam( old_juggernaut, G_PreyTeam() );
+}
 
 void G_SwitchJuggernaut( gentity_t *new_juggernaut, gentity_t *old_juggernaut )
 {
-	G_ChangeTeam( old_juggernaut, G_PreyTeam() );
+	G_DemoteJuggernaut(  old_juggernaut );
 	if (new_juggernaut && new_juggernaut->client)
 		G_PromoteJuggernaut(new_juggernaut);
 	else
 		G_PromoteJuggernaut();
+
 }
 
 // Pick a juggernaut if there is none
 void G_CheckAndSpawnJuggernaut()
 {
-	int juggernaut_count = 0;
+	gentity_t *juggernaut = nullptr;
 	for ( gentity_t *ent = nullptr; (ent = G_IterateEntities(ent)); )
 	{
-		if ( !ent || !ent->client )
-			continue;
-
-		// change teams
-		if ( ent->client->sess.restartTeam != TEAM_NONE )
+		if ( ent && ent->client && G_Team(ent) == G_JuggernautTeam() )
 		{
-			G_ChangeTeam(ent, ent->client->sess.restartTeam);
-			if ( ent->client->sess.restartTeam == G_JuggernautTeam() )
+			if (!juggernaut)
 			{
-				G_SpawnJuggernaut(ent);
+				juggernaut = ent;
 			}
 			else
 			{
-				G_FreeEntity(ent);
+				// downgrade the extra juggernaut
+				Log::Warn("Argh, one juggernaut too many");
+				G_ChangeTeam( juggernaut, G_PreyTeam() );
 			}
-			ent->client->sess.restartTeam = TEAM_NONE;
-		}
-
-		if ( G_Team(ent) == G_JuggernautTeam() )
-		{
-			juggernaut_count++;
 		}
 	}
 
-	if (juggernaut_count == 1)
-		return; // perfect
+	if (juggernaut)
+		return;
 
-	if (juggernaut_count == 0)
-		G_PromoteJuggernaut();
-	else
-		Log::Warn("Argh, we have %i juggernauts", juggernaut_count);
+	Log::Notice("New Juggernaut!");
+
+	G_PromoteJuggernaut();
 }
