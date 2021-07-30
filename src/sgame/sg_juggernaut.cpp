@@ -60,17 +60,13 @@ static void G_PromoteJuggernaut( gentity_t *new_juggernaut = nullptr )
 	if (!new_juggernaut)
 		return;
 
-	new_juggernaut->client->sess.spectatorState = SPECTATOR_NOT;
-	new_juggernaut->client->sess.restartTeam = G_PreyTeam();
-	new_juggernaut->client->pers.classSelection = G_JuggernautClass();
+	new_juggernaut->client->sess.restartTeam = G_JuggernautTeam();
 }
 
 // Cleanly create a juggernaut, this will send messages events and all
 static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 {
-	Log::Notice("Promoting %p to Juggernaut!", new_juggernaut);
-
-	G_ChangeTeam( new_juggernaut, G_JuggernautTeam() );
+	Log::Warn("Promoting %p to Juggernaut!", new_juggernaut);
 
 	// Get the spawn position
 	gentity_t *spawn;
@@ -94,6 +90,8 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 		// TODO: SpotWouldTelefrag?
 	}
 
+	G_ChangeTeam( new_juggernaut, G_JuggernautTeam() );
+
 	//TODO: send messages
 
 	/* bot */
@@ -103,8 +101,11 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 	          : model->navHandle;
 	G_BotSetNavMesh( new_juggernaut->s.number, navHandle );
 
+	new_juggernaut->client->sess.spectatorState = SPECTATOR_NOT;
+	new_juggernaut->client->pers.classSelection = G_JuggernautClass();
 	ClientUserinfoChanged( new_juggernaut->client->ps.clientNum, false );
 	ClientSpawn( new_juggernaut, spawn, origin, angles );
+	ClientUserinfoChanged( new_juggernaut->client->ps.clientNum, false );
 
 	Beacon::Tag( new_juggernaut, G_PreyTeam(), true );
 }
@@ -120,7 +121,7 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 
 void G_SwitchJuggernaut( gentity_t *new_juggernaut, gentity_t *old_juggernaut )
 {
-	G_ChangeTeam( old_juggernaut, G_PreyTeam() );
+	old_juggernaut->client->sess.restartTeam = G_PreyTeam();
 	if (new_juggernaut && new_juggernaut->client)
 		G_PromoteJuggernaut(new_juggernaut);
 	else
@@ -137,18 +138,35 @@ void G_CheckAndSpawnJuggernaut()
 			continue;
 
 		// change teams
-		if ( ent->client->sess.restartTeam != TEAM_NONE )
+		team_t target_team = ent->client->sess.restartTeam;
+		if ( target_team != TEAM_NONE )
 		{
-			G_ChangeTeam(ent, ent->client->sess.restartTeam);
-			if ( ent->client->sess.restartTeam == G_JuggernautTeam() )
+			G_ChangeTeam(ent, target_team);
+			ent->client->sess.restartTeam = TEAM_NONE;
+			ASSERT(G_Team(ent) == target_team);
+
+			// clear shit
+			G_UnlaggedClear(ent);
+			auto flags = ent->client->ps.eFlags;
+			memset( &ent->client->ps, 0, sizeof( ent->client->ps ) );
+			memset( &ent->client->pmext, 0, sizeof( ent->client->pmext ) );
+			ent->client->ps.eFlags = flags;
+
+			if ( target_team == G_JuggernautTeam() )
 			{
 				G_SpawnJuggernaut(ent);
 			}
 			else
 			{
-				G_FreeEntity(ent);
+				Log::Warn("Kicked %p from Juggernauts!", ent);
+				ent->client->sess.spectatorState = SPECTATOR_LOCKED; //free spec?
+				ent->client->pers.classSelection = PCL_NONE;
+				ClientUserinfoChanged( ent->client->ps.clientNum, false );
+				ClientSpawn( ent, nullptr, nullptr, nullptr );
+				ClientUserinfoChanged( ent->client->ps.clientNum, false );
+				//G_FreeEntity(ent);
 			}
-			ent->client->sess.restartTeam = TEAM_NONE;
+			//*ent->entity->Get<HealthComponent>() = HealthComponent(*ent->entity, 100.0f);
 		}
 
 		if ( G_Team(ent) == G_JuggernautTeam() )
