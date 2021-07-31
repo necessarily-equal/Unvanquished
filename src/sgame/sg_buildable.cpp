@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "common/FileSystem.h"
 #include "sg_local.h"
+#include "sg_juggernaut.h"
 #include "CustomSurfaceFlags.h"
 #include "Entities.h"
 #include "CBSE.h"
@@ -1829,6 +1830,11 @@ static void BuildableSpawnCBSE(gentity_t *ent, buildable_t buildable) {
 	}
 }
 
+static void Suicide(gentity_t *self)
+{
+	Entities::Kill( self, MOD_SUICIDE );
+}
+
 static gentity_t *SpawnBuildable( gentity_t *builder, buildable_t buildable, const vec3_t origin,
                          const vec3_t normal, const vec3_t angles, int groundEntNum )
 {
@@ -2065,6 +2071,12 @@ static gentity_t *SpawnBuildable( gentity_t *builder, buildable_t buildable, con
 
 	if( builder->client )
 		Beacon::Tag( built, (team_t)builder->client->pers.team, true );
+
+	// force the juggernaut to be baseless
+	if ( g_gameMode.Get() == "juggernaut" && (
+			   attr->team == G_JuggernautTeam()
+			|| attr->dretchAttackable ) )
+		built->think = Suicide;
 
 	return built;
 }
