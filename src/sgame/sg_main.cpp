@@ -225,7 +225,6 @@ Cvar::Cvar<bool>   g_autoPause("g_autoPause", "pause empty server", Cvar::NONE, 
 Cvar::Cvar<int> g_maxMiners("g_maxMiners", "set maximum number of miners per team. -1 = disabled.", Cvar::NONE, -1);
 
 Cvar::Cvar<std::string> g_gameMode("g_gameMode", "game mode", Cvar::NONE, "juggernaut");
-Cvar::Cvar<int>   g_juggernautTeam("g_juggernautTeam", "juggernaut team", Cvar::NONE, (int)TEAM_ALIENS);
 
 // <bot stuff>
 

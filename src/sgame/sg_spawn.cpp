@@ -33,6 +33,7 @@ Maryland 20850 USA.
 */
 
 #include "sg_local.h"
+#include "sg_juggernaut.h"
 #include "sg_spawn.h"
 
 bool G_SpawnString( const char *key, const char *defaultString, char **out )
@@ -1115,8 +1116,7 @@ static void SP_worldspawn()
 
 	if ( g_gameMode.Get() == "juggernaut" )
 	{
-		// FIXME: memory safety
-		level.team[ g_juggernautTeam.Get() ].locked = true;
+		level.team[ G_JuggernautTeam() ].locked = true;
 	}
 
 	level.timelimit = g_timelimit.Get();

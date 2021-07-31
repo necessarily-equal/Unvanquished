@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "sg_local.h"
+#include "sg_juggernaut.h"
 #include "engine/qcommon/q_unicode.h"
 #include "botlib/bot_api.h"
 #include <common/FileSystem.h>
@@ -2480,7 +2481,7 @@ static bool Cmd_Class_internal( gentity_t *ent, const char *s, bool report )
 	clientNum = ent->client - level.clients;
 	newClass = BG_ClassByName( s )->number;
 
-	if ( g_gameMode.Get() == "juggernaut" && g_juggernautTeam.Get() == ent->client->pers.team )
+	if ( g_gameMode.Get() == "juggernaut" && G_JuggernautTeam() == G_Team(ent) )
 	{
 		if ( report )
 		{

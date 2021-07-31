@@ -580,7 +580,7 @@ void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, in
 
 	trap_LinkEntity( self );
 
-	if ( G_Team( self ) == g_juggernautTeam.Get() )
+	if ( G_Team( self ) == G_JuggernautTeam() )
 	{
 		// we need a new juggernaut
 		G_SwitchJuggernaut( inflictor, self );

@@ -1,19 +1,16 @@
-#include "sg_local.h"
+#include "sg_juggernaut.h"
 #include "sg_bot_local.h"
 #include "CBSE.h"
 #include "Entities.h"
 
+// TODO: make this an enum cvar, someday
+static Cvar::Cvar<int> g_juggernautTeam("g_juggernautTeam",
+		"juggernaut team", Cvar::NONE, (int)TEAM_ALIENS);
 
-static inline team_t G_JuggernautTeam()
-{
-	return static_cast<team_t>( g_juggernautTeam.Get() );
-}
-
-static inline team_t G_PreyTeam()
-{
-	return G_JuggernautTeam() == TEAM_ALIENS ?
-			TEAM_HUMANS : TEAM_ALIENS;
-}
+static Cvar::Range<Cvar::Cvar<int>> g_juggernautMinChallengerCount(
+		"g_juggernautMinChallengerCount",
+		"minimun number of player to assign the first juggernaut",
+		Cvar::NONE, 3, 2, 100);
 
 static inline class_t G_JuggernautClass()
 {
@@ -26,15 +23,25 @@ static inline class_t G_JuggernautClass()
 	}
 }
 
-// TODO: make this a cvar
-constexpr int MIN_CHALLENGER_COUNT = 3;
+team_t G_JuggernautTeam()
+{
+	// wrapper for type safety
+	return g_juggernautTeam.Get() == TEAM_ALIENS ?
+			TEAM_ALIENS : TEAM_HUMANS;
+}
+
+team_t G_PreyTeam()
+{
+	return g_juggernautTeam.Get() == TEAM_ALIENS ?
+			TEAM_HUMANS : TEAM_ALIENS;
+}
 
 // Look at people that might be juggernaut and return a random one
 gentity_t *G_SelectRandomJuggernaut()
 {
 	const team_t preyTeam = G_PreyTeam();
 	const int numChallengers = level.team[ preyTeam ].numClients;
-	if ( numChallengers >= MIN_CHALLENGER_COUNT )
+	if ( numChallengers >= g_juggernautMinChallengerCount.Get() )
 	{
 		float count = static_cast<float>( numChallengers );
 
