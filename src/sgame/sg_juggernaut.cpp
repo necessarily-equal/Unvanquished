@@ -88,6 +88,13 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 		// TODO: SpotWouldTelefrag?
 	}
 
+	// clear shit
+	G_UnlaggedClear(new_juggernaut);
+	auto flags = new_juggernaut->client->ps.eFlags;
+	memset( &new_juggernaut->client->ps, 0, sizeof new_juggernaut->client->ps );
+	memset( &new_juggernaut->client->pmext, 0, sizeof new_juggernaut->client->pmext );
+	new_juggernaut->client->ps.eFlags = flags;
+
 	G_ChangeTeam( new_juggernaut, G_JuggernautTeam() );
 
 	//TODO: send messages
@@ -131,6 +138,39 @@ void G_SwitchJuggernaut( gentity_t *new_juggernaut, gentity_t *old_juggernaut )
 	}
 }
 
+static void G_AssignTeam(gentity_t *ent)
+{
+	team_t target_team = ent->client->sess.restartTeam;
+
+	ent->client->sess.restartTeam = TEAM_NONE;
+	//ASSERT(target_team > TEAM_NONE && target_team < TEAM_ALL);
+	//if (target_team <= TEAM_NONE || target_team >= TEAM_ALL)
+	//	return;
+
+	G_ChangeTeam(ent, target_team);
+	ASSERT(G_Team(ent) == target_team);
+
+	if ( target_team == G_JuggernautTeam() )
+	{
+		G_SpawnJuggernaut(ent);
+	}
+	else
+	{
+		// clear shit
+		G_UnlaggedClear(ent);
+		auto flags = ent->client->ps.eFlags;
+		memset( &ent->client->ps, 0, sizeof ent->client->ps );
+		memset( &ent->client->pmext, 0, sizeof ent->client->pmext );
+		ent->client->ps.eFlags = flags;
+
+		// assign to the other team
+		ent->client->sess.spectatorState = SPECTATOR_LOCKED; //free spec?
+		ent->client->pers.classSelection = PCL_NONE;
+		ClientSpawn( ent, nullptr, nullptr, nullptr );
+		ClientUserinfoChanged( ent->client->ps.clientNum, false );
+	}
+}
+
 // Pick a juggernaut if there is none
 void G_CheckAndSpawnJuggernaut()
 {
@@ -140,33 +180,20 @@ void G_CheckAndSpawnJuggernaut()
 		if ( !ent || !ent->client )
 			continue;
 
-		// change teams
-		team_t target_team = ent->client->sess.restartTeam;
-		if ( target_team != TEAM_NONE )
+		if ( ent->client->sess.restartTeam == TEAM_ALIENS )
 		{
-			G_ChangeTeam(ent, target_team);
-			ent->client->sess.restartTeam = TEAM_NONE;
-			ASSERT(G_Team(ent) == target_team);
+			G_AssignTeam( ent );
+		}
+	}
 
-			// clear shit
-			G_UnlaggedClear(ent);
-			auto flags = ent->client->ps.eFlags;
-			memset( &ent->client->ps, 0, sizeof( ent->client->ps ) );
-			memset( &ent->client->pmext, 0, sizeof( ent->client->pmext ) );
-			ent->client->ps.eFlags = flags;
-			if ( target_team == G_JuggernautTeam() )
-			{
-				G_SpawnJuggernaut(ent);
-			}
-			else
-			{
-				ent->client->sess.spectatorState = SPECTATOR_LOCKED; //free spec?
-				ent->client->pers.classSelection = PCL_NONE;
-				ClientSpawn( ent, nullptr, nullptr, nullptr );
-				ClientUserinfoChanged( ent->client->ps.clientNum, false );
-				//G_FreeEntity(ent);
-			}
-			//*ent->entity->Get<HealthComponent>() = HealthComponent(*ent->entity, 100.0f);
+	for ( gentity_t *ent = nullptr; (ent = G_IterateEntities(ent)); )
+	{
+		if ( !ent || !ent->client )
+			continue;
+
+		if ( ent->client->sess.restartTeam == TEAM_HUMANS )
+		{
+			G_AssignTeam( ent );
 		}
 
 		if ( G_Team(ent) == G_JuggernautTeam() )
