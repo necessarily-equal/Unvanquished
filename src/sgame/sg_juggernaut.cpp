@@ -80,6 +80,8 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 	gentity_t *spawn;
 	vec3_t origin;
 	vec3_t angles;
+	HealthComponent const *healthComponent = new_juggernaut->entity->Get<HealthComponent>();
+	ASSERT(healthComponent == nullptr); // NOOOOOOOOO WHY DOESN'T THIS FAIL
 	if (Entities::IsAlive(new_juggernaut))
 	{
 		Log::Warn("spawning from an alive juggernaut");
