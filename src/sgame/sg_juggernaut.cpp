@@ -58,7 +58,7 @@ static void G_PromoteJuggernaut( gentity_t *new_juggernaut = nullptr )
 	if (!new_juggernaut)
 		new_juggernaut = G_SelectRandomJuggernaut();
 	if (!new_juggernaut)
-		return;
+		return; // give up
 
 	new_juggernaut->client->sess.restartTeam = G_JuggernautTeam();
 }
@@ -66,8 +66,6 @@ static void G_PromoteJuggernaut( gentity_t *new_juggernaut = nullptr )
 // Cleanly create a juggernaut, this will send messages events and all
 static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 {
-	Log::Warn("Promoting %p to Juggernaut!", new_juggernaut);
-
 	// Get the spawn position
 	gentity_t *spawn;
 	vec3_t origin;
@@ -103,10 +101,10 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 
 	new_juggernaut->client->sess.spectatorState = SPECTATOR_NOT;
 	new_juggernaut->client->pers.classSelection = G_JuggernautClass();
-	ClientUserinfoChanged( new_juggernaut->client->ps.clientNum, false );
 	ClientSpawn( new_juggernaut, spawn, origin, angles );
 	ClientUserinfoChanged( new_juggernaut->client->ps.clientNum, false );
 
+	// Tell everyone it's here
 	Beacon::Tag( new_juggernaut, G_PreyTeam(), true );
 }
 
@@ -123,9 +121,14 @@ void G_SwitchJuggernaut( gentity_t *new_juggernaut, gentity_t *old_juggernaut )
 {
 	old_juggernaut->client->sess.restartTeam = G_PreyTeam();
 	if (new_juggernaut && new_juggernaut->client)
+	{
 		G_PromoteJuggernaut(new_juggernaut);
+	}
 	else
+	{
+		Log::Warn("No killer, choosing a new juggernaut randomly");
 		G_PromoteJuggernaut();
+	}
 }
 
 // Pick a juggernaut if there is none
@@ -151,17 +154,14 @@ void G_CheckAndSpawnJuggernaut()
 			memset( &ent->client->ps, 0, sizeof( ent->client->ps ) );
 			memset( &ent->client->pmext, 0, sizeof( ent->client->pmext ) );
 			ent->client->ps.eFlags = flags;
-
 			if ( target_team == G_JuggernautTeam() )
 			{
 				G_SpawnJuggernaut(ent);
 			}
 			else
 			{
-				Log::Warn("Kicked %p from Juggernauts!", ent);
 				ent->client->sess.spectatorState = SPECTATOR_LOCKED; //free spec?
 				ent->client->pers.classSelection = PCL_NONE;
-				ClientUserinfoChanged( ent->client->ps.clientNum, false );
 				ClientSpawn( ent, nullptr, nullptr, nullptr );
 				ClientUserinfoChanged( ent->client->ps.clientNum, false );
 				//G_FreeEntity(ent);
@@ -179,7 +179,7 @@ void G_CheckAndSpawnJuggernaut()
 		return; // perfect
 
 	if (juggernaut_count == 0)
-		G_PromoteJuggernaut();
+		G_PromoteJuggernaut(); // mark one to become juggernaut on next frame
 	else
-		Log::Warn("Argh, we have %i juggernauts", juggernaut_count);
+		Log::Warn("Huh oh, we have %i juggernauts", juggernaut_count);
 }
