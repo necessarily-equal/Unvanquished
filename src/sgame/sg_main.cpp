@@ -33,7 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "botlib/bot_api.h"
 #include "common/FileSystem.h"
 
-#define INTERMISSION_DELAY_TIME 1000
+#define INTERMISSION_DELAY_TIME 10000
 
 level_locals_t level;
 
@@ -1948,33 +1948,25 @@ void CheckExitRules()
 		}
 	}
 
-	if ( level.unconditionalWin == TEAM_HUMANS ||
-	     ( level.unconditionalWin != TEAM_ALIENS &&
-	       ( level.time > level.startTime + 1000 ) &&
-	       ( level.team[ TEAM_ALIENS ].numSpawns == 0 ) &&
-	       ( level.team[ TEAM_ALIENS ].numAliveClients == 0 ) ) )
+	if ( level.unconditionalWin != TEAM_NONE )
 	{
+		team_t winning_team = level.unconditionalWin;
 		//humans win
-		level.lastWin = TEAM_HUMANS;
-		trap_SendServerCommand( -1, "print_tr \"" N_("Humans win") "\"" );
-		trap_SetConfigstring( CS_WINNER, "Humans Win" );
-		G_notify_sensor_end( TEAM_HUMANS );
-		LogExit( "Humans win." );
-		G_MapLog_Result( 'h' );
-	}
-	else if ( level.unconditionalWin == TEAM_ALIENS ||
-	          ( level.unconditionalWin != TEAM_HUMANS &&
-	            ( level.time > level.startTime + 1000 ) &&
-	            ( level.team[ TEAM_HUMANS ].numSpawns == 0 ) &&
-	            ( level.team[ TEAM_HUMANS ].numAliveClients == 0 ) ) )
-	{
-		//aliens win
-		level.lastWin = TEAM_ALIENS;
-		trap_SendServerCommand( -1, "print_tr \"" N_("Aliens win") "\"" );
-		trap_SetConfigstring( CS_WINNER, "Aliens Win" );
-		G_notify_sensor_end( TEAM_ALIENS );
-		LogExit( "Aliens win." );
-		G_MapLog_Result( 'a' );
+		level.lastWin = winning_team;
+		const char *winner = nullptr;
+		int best_kill_count = 0;
+		ForEntities<ClientComponent>([&](Entity& entity, ClientComponent& c) {
+			int kill_count = c.GetClientData()->ps.persistant[PERS_JUGGERNAUTKILLS];
+			if (kill_count > best_kill_count) {
+				winner = c.GetClientData()->pers.netname;
+				best_kill_count = kill_count;
+			}
+		});
+		trap_SendServerCommand( -1, va("print_tr \"%s wins\"", winner) );
+		trap_SetConfigstring( CS_WINNER, va("%s Wins", winner) );
+		G_notify_sensor_end( winning_team );
+		LogExit( va("%s wins.", winner) );
+		G_MapLog_Result( winning_team == TEAM_ALIENS ? 'a' : 'h' );
 	}
 	else if ( g_emptyTeamsSkipMapTime.Get() &&
 		( level.time - level.startTime ) / 60000 >=
