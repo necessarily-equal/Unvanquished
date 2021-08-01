@@ -80,23 +80,24 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 	gentity_t *spawn;
 	vec3_t origin;
 	vec3_t angles;
-	if (Entities::IsAlive(new_juggernaut))
-	{
-		Log::Warn("spawning from an alive juggernaut");
-		spawn = new_juggernaut;
-		// Eww vector lib
-		const float *o = new_juggernaut->s.origin;
-		const float *a = new_juggernaut->s.angles;
+	//if (Entities::IsAlive(new_juggernaut))
+	//{
+	//	Log::Warn("spawning from an alive juggernaut");
+	//	spawn = new_juggernaut;
+	//	// Eww vector lib
+	//	const float *o = new_juggernaut->s.origin;
+	//	const float *a = new_juggernaut->s.angles;
+	//	VectorCopy( o, origin );
+	//	VectorCopy( a, angles );
+	//}
+	//else
+	//{
+		spawn = G_PickRandomEntityOfClass("team_alien_spawn");
+		const float *o = spawn->s.origin;
+		const float *a = spawn->s.angles;
 		VectorCopy( o, origin );
 		VectorCopy( a, angles );
-	}
-	else
-	{
-		Log::Warn("spawning from a non-spawned juggernaut");
-		spawn = G_SelectAlienLockSpawnPoint( origin, angles );
-		origin[2] -= 30;
-		// TODO: SpotWouldTelefrag?
-	}
+	//}
 
 	// clear shit
 	G_UnlaggedClear(new_juggernaut);
