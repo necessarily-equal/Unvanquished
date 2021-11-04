@@ -751,7 +751,7 @@ CG_Say
 // Disable log spam suppression since chat should be rate-limited server-side
 static Log::Logger chatLog = Log::Logger("chat", "", Log::Level::NOTICE).WithoutSuppression();
 
-static void CG_Say( const char *name, int clientNum, saymode_t mode, const char *text )
+void CG_Say( const char *name, int clientNum, saymode_t mode, const char *text )
 {
 	char prefix[ 21 ] = "";
 	const char *ignore = "";

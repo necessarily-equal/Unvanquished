@@ -145,7 +145,6 @@ static void CG_TransitionSnapshot()
 {
 	centity_t  *cent;
 	snapshot_t *oldFrame;
-	int        oldWeapon;
 
 	if ( !cg.snap )
 	{
@@ -173,7 +172,7 @@ static void CG_TransitionSnapshot()
 
 	// Need to store the previous weapon because BG_PlayerStateToEntityState might change it
 	// so the CG_OnPlayerWeaponChange callback is never called
-	oldWeapon = oldFrame->ps.weapon;
+	int oldWeapon = oldFrame->ps.weapon;
 
 	BG_PlayerStateToEntityState( &cg.snap->ps, &cg_entities[ cg.snap->ps.clientNum ].currentState, false );
 	cg_entities[ cg.snap->ps.clientNum ].interpolate = false;
@@ -290,6 +289,7 @@ times if the client system fails to return a
 valid snapshot.
 ========================
 */
+void CG_Say( const char *name, int clientNum, saymode_t mode, const char *text );
 static snapshot_t *CG_ReadNextSnapshot()
 {
 	bool   r;
@@ -300,6 +300,8 @@ static snapshot_t *CG_ReadNextSnapshot()
 		Log::Warn( "CG_ReadNextSnapshot: way out of range, %i > %i",
 		           cg.latestSnapshotNum, cgs.processedSnapshotNum );
 	}
+
+	//CG_Say(nullptr, 0, SAY_ALL, va("processing snapshot %i", cgs.processedSnapshotNum));
 
 	while ( cgs.processedSnapshotNum < cg.latestSnapshotNum )
 	{

@@ -112,6 +112,7 @@ static HudUnit *findUnit( RocketHud *in, HudUnit &find )
 	return nullptr;
 }
 
+void CG_Say( const char *name, int clientNum, saymode_t mode, const char *text );
 void Rocket_ShowHud( int weapon )
 {
 	RocketHud *currentHud = &huds[ weapon ];
@@ -145,6 +146,7 @@ void Rocket_ShowHud( int weapon )
 		it->load = true;
 	}
 
+	//CG_Say(nullptr, 0, SAY_ALL, va("setting hud to weapon %i", weapon));
 	activeHud = currentHud;
 }
 

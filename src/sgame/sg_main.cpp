@@ -2445,6 +2445,16 @@ void G_RunFrame( int levelTime )
 	int        msec;
 	static int ptime3000 = 0;
 
+	static Log::Logger debugLog = Log::Logger("debug", "", Log::Level::NOTICE).WithoutSuppression();
+	debugLog.Warn("sgame: client 0, ptr: %p %p, weapon %i",
+			&g_clients[0],
+			&g_clients[0].ps.weapon,
+			g_clients[0].ps.weapon);
+	debugLog.Warn("sgame: client 3, ptr: %p %p, weapon %i",
+			&g_clients[3],
+			&g_clients[3].ps.weapon,
+			g_clients[3].ps.weapon);
+
 	// if we are waiting for the level to restart, do nothing
 	if ( level.restarted )
 	{
