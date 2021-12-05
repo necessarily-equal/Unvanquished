@@ -2711,50 +2711,37 @@ glm::vec3 BG_GetClientViewOrigin( const playerState_t *ps )
 	return VEC2GLM( ps->origin ) + static_cast<float>( ps->viewheight ) * BG_GetClientNormal( ps );
 }
 
-void BG_BoundingBox( class_t pClass,
-                     glm::vec3* mins,  glm::vec3* maxs,
-                     glm::vec3* cmaxs, glm::vec3* dmins, glm::vec3* dmaxs )
+void BG_BoundingBox( class_t pClass, glm::vec3 &mins, glm::vec3 &maxs )
 {
 	classModelConfig_t *classModelConfig = BG_ClassModelConfig( pClass );
 	ASSERT( classModelConfig != nullptr );
 
-	if ( mins != nullptr )
-	{
-		*mins = VEC2GLM( classModelConfig->mins );
-	}
-
-	if ( maxs != nullptr )
-	{
-		*maxs = VEC2GLM( classModelConfig->maxs );
-	}
-
-	if ( cmaxs != nullptr )
-	{
-		*cmaxs = VEC2GLM( classModelConfig->crouchMaxs );
-	}
-
-	if ( dmins != nullptr )
-	{
-		*dmins = VEC2GLM( classModelConfig->deadMins );
-	}
-
-	if ( dmaxs != nullptr )
-	{
-		*dmaxs = VEC2GLM( classModelConfig->deadMaxs );
-	}
+	mins = VEC2GLM( classModelConfig->mins );
+	maxs = VEC2GLM( classModelConfig->maxs );
 }
 
-void BG_BoundingBox( buildable_t buildable, glm::vec3* mins, glm::vec3* maxs )
+glm::vec3 BG_CrouchBoundingBox( class_t pClass )
+{
+	classModelConfig_t *classModelConfig = BG_ClassModelConfig( pClass );
+	ASSERT( classModelConfig != nullptr );
+
+	return VEC2GLM( classModelConfig->crouchMaxs );
+}
+
+void BG_DeadBoundingBox( class_t pClass, glm::vec3 &mins, glm::vec3 &maxs )
+{
+	classModelConfig_t *classModelConfig = BG_ClassModelConfig( pClass );
+	ASSERT( classModelConfig != nullptr );
+
+	mins = VEC2GLM( classModelConfig->deadMins );
+	maxs = VEC2GLM( classModelConfig->deadMaxs );
+}
+
+void BG_BoundingBox( buildable_t buildable, glm::vec3 &mins, glm::vec3 &maxs )
 {
 	buildableModelConfig_t *buildableModelConfig = BG_BuildableModelConfig( buildable );
+	ASSERT( buildableModelConfig != nullptr );
 
-	if ( mins != nullptr )
-	{
-		*mins = VEC2GLM( buildableModelConfig->mins );
-	}
-
-	if ( maxs != nullptr )
-	{
-		*maxs = VEC2GLM( buildableModelConfig->maxs );
-	}
+	mins = VEC2GLM( buildableModelConfig->mins );
+	maxs = VEC2GLM( buildableModelConfig->maxs );
 }
