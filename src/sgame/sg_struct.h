@@ -366,7 +366,8 @@ struct gentity_t
 	int       watertype;
 	int       waterlevel;
 
-	float buildQueueTime; //additional buildtime for placed buildings
+	// for a builder, additional buildtime for placed buildings
+	int       buildQueueTime;
 
 	/*
 	 * variables that got randomly semantically abused by everyone
@@ -381,6 +382,8 @@ struct gentity_t
 
 	team_t      buildableTeam; // buildable item team
 	namelog_t   *builtBy; // clientNum of person that built this
+	// the time at which the buildable will (or did) finish spawning
+	int         buildEndTime;
 
 	int         pain_debounce_time;
 	int         last_move_time;

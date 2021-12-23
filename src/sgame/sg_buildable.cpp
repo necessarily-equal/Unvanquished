@@ -1844,8 +1844,6 @@ static gentity_t *SpawnBuildable( gentity_t *builder, buildable_t buildable, con
 	built->enabled = false;
 	built->spawned = false;
 
-	built->s.time = built->creationTime;
-
 	built->r.contents = CONTENTS_BODY;
 	built->clipmask   = MASK_PLAYERSOLID;
 	built->target     = nullptr;
@@ -1963,17 +1961,20 @@ static gentity_t *SpawnBuildable( gentity_t *builder, buildable_t buildable, con
 	// -------------------------------------------------
 
 	// Start construction.
+	int buildDuration = 0;
 	if (builder->client) {
-		if (g_instantBuilding.Get()) {
-			// Build instantly in cheat mode.
-			// HACK: This causes animation issues and can result in built->creationTime < 0.
-			built->creationTime -= attr->buildTime+builder->buildQueueTime;
-		} else {
-			built->buildQueueTime = builder->buildQueueTime;
+		if (!g_instantBuilding.Get())
+		{
+			buildDuration += attr->buildTime;
+			buildDuration += builder->buildQueueTime;
+
 			HealthComponent *healthComponent = built->entity->Get<HealthComponent>();
 			healthComponent->SetHealth(healthComponent->MaxHealth() * BUILDABLE_START_HEALTH_FRAC);
 		}
 	}
+	built->buildEndTime = built->creationTime + buildDuration;
+	built->s.time = built->creationTime;
+	built->s.time2 = built->buildEndTime; // used by cgame for build animations
 
 	// Free existing buildables
 	G_FreeMarkedBuildables( builder, readable, sizeof( readable ), buildnums, sizeof( buildnums ) );

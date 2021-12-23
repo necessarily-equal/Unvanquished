@@ -93,15 +93,16 @@ void BuildableComponent::Think(int timeDelta) {
 	do {
 		switch ((oldState = state)) {
 			case CONSTRUCTING: {
-				int constructionTime = BG_Buildable(entity.oldEnt->s.modelindex)->buildTime + entity.oldEnt->buildQueueTime;
 
-				if (entity.oldEnt->creationTime + constructionTime < level.time) {
+				if (level.time > entity.oldEnt->buildEndTime) {
 					// Finish construction.
 					state = CONSTRUCTED;
 
 					// Award momentum.
 					G_AddMomentumForBuilding(entity.oldEnt);
 				} else {
+					int constructionTime = entity.oldEnt->buildEndTime - entity.oldEnt->creationTime;
+					ASSERT(constructionTime >= timeDelta);
 					// Gain health while constructing.
 					entity.Heal(GetHealthComponent().MaxHealth() * ((float)timeDelta / (float)constructionTime)
 					            * (1.0f - BUILDABLE_START_HEALTH_FRAC), nullptr);

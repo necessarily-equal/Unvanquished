@@ -2280,11 +2280,14 @@ void CG_Buildable( centity_t *cent )
 	// TODO: Rename condition as this is true for iqm models, too.
 	if ( cg_buildables[ es->modelindex ].md5 )
 	{
-		// If buildable has spawned or is a human buildable, don't alter the size
-		bool  spawned = ( es->eFlags & EF_B_SPAWNED ) || ( team == TEAM_HUMANS );
-		health = es->generic1;
-		float adjustScale = spawned ? 1.0f :
-			sinf( static_cast<float>(health) / ba->health * M_PI/2.0f );
+		// Alter buildable size for spawning alien buildables
+		const float buildDuration = es->time2 - es->time;
+		const float buildElapsedTime = cg.time - es->time;
+		bool buildFinished = buildElapsedTime > buildDuration;
+		float scaleAdjustRatio = (team == TEAM_ALIENS) && !buildFinished
+			? sinf( buildElapsedTime / buildDuration * M_PI/2.0f )
+			: 1.0f;
+
 		ent.skeleton = bSkeleton;
 
 		if( es->modelindex == BA_H_MGTURRET || es->modelindex == BA_H_ROCKETPOD )
@@ -2390,7 +2393,7 @@ void CG_Buildable( centity_t *cent )
 			QuatMultiply2( ent.skeleton.bones[ 38 ].t.rot, rotation );
 		}
 
-		CG_TransformSkeleton( &ent.skeleton, adjustScale );
+		CG_TransformSkeleton( &ent.skeleton, scaleAdjustRatio );
 	}
 
 	if ( health <= 0 )
