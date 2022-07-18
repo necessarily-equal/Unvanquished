@@ -1,5 +1,6 @@
 #include "sg_juggernaut.h"
 #include "sg_bot_local.h"
+#include "sg_bot_util.h"
 #include "CBSE.h"
 #include "Entities.h"
 
@@ -112,17 +113,12 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 
 	//TODO: send messages
 
-	/* bot */
-	auto model = BG_ClassModelConfig( new_juggernaut->client->pers.classSelection );
-	auto navHandle = model->navMeshClass
-	          ? BG_ClassModelConfig( model->navMeshClass )->navHandle
-	          : model->navHandle;
-	G_BotSetNavMesh( new_juggernaut->s.number, navHandle );
-
 	new_juggernaut->client->sess.spectatorState = SPECTATOR_NOT;
 	new_juggernaut->client->pers.classSelection = G_JuggernautClass();
 	ClientSpawn( new_juggernaut, spawn, origin, angles );
 	ClientUserinfoChanged( new_juggernaut->client->ps.clientNum, false );
+
+	BotSetNavmesh( new_juggernaut, G_JuggernautClass() );
 
 	// Tell everyone it's here
 	Beacon::Tag( new_juggernaut, G_PreyTeam(), true );
