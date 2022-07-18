@@ -1506,6 +1506,7 @@ struct cgMedia_t
 	sfxHandle_t turretSpinupSound;
 
 	sfxHandle_t newJuggernautSound;
+	sfxHandle_t deathSound;
 
 	sfxHandle_t grenadeBounceSound0;
 	sfxHandle_t grenadeBounceSound1;
