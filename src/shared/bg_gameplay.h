@@ -124,7 +124,7 @@ extern int   LEVEL4_TRAMPLE_REPEAT;
 #define BARRICADE_SHRINKPROP    0.25f
 #define BARRICADE_SHRINKTIMEOUT 500
 
-#define BOOST_TIME              20000
+#define BOOST_TIME              12000
 #define BOOST_WARN_TIME         15000
 #define BOOST_REPEAT_ANIM       2000
 
