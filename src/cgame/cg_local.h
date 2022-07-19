@@ -1591,6 +1591,7 @@ struct cgMedia_t
 	qhandle_t   redCgrade;
 	qhandle_t   tealCgrade;
 	qhandle_t   desaturatedCgrade;
+	qhandle_t   whiteOnlyCgrade;
 
 	qhandle_t   scopeShader;
 
