@@ -66,51 +66,36 @@ gentity_t *G_SelectRandomJuggernaut()
 // This function is expected to be called only by G_SwitchJuggernaut
 static void G_PromoteJuggernaut( gentity_t *new_juggernaut )
 {
-	if (!new_juggernaut)
+	bool teleport = true;
+	if (!new_juggernaut || !new_juggernaut->client)
 	{
 		Log::Warn("No designated juggernaut, choosing a new juggernaut randomly");
 		new_juggernaut = G_SelectRandomJuggernaut();
+		teleport = false;
 	}
 	if (!new_juggernaut)
 		return; // give up
 
-	new_juggernaut->client->sess.restartTeam = G_JuggernautTeam();
+	new_juggernaut->client->sess.juggRestartTeam = G_JuggernautTeam();
+	new_juggernaut->client->sess.juggMayTeleport = teleport;
 }
 
 // Cleanly create a juggernaut, this will send messages events and all
-static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
+static void G_SpawnJuggernaut( gentity_t *new_juggernaut, vec3_t *old_origin, vec3_t *old_angles )
 {
 	// Shout "Le roi est mort, vive le roi!"
 	G_BroadcastEvent(EV_NEW_JUGGERNAUT, 0, G_PreyTeam());
 
 	// Get the spawn position
-	gentity_t *spawn;
-	vec3_t origin;
-	vec3_t angles;
-	//if (Entities::IsAlive(new_juggernaut))
-	//{
-	//	Log::Warn("spawning from an alive juggernaut");
-	//	spawn = new_juggernaut;
-	//	// Eww vector lib
-	//	const float *o = new_juggernaut->s.origin;
-	//	const float *a = new_juggernaut->s.angles;
-	//	VectorCopy( o, origin );
-	//	VectorCopy( a, angles );
-	//}
-	//else
-	//{
-		spawn = G_PickRandomEntityOfClass("team_alien_spawn");
-		const float *o = spawn->s.origin;
-		const float *a = spawn->s.angles;
-		VectorCopy( o, origin );
-		VectorCopy( a, angles );
-	//}
-
-	//TODO: send messages
+	gentity_t *spawn = G_PickRandomEntityOfClass("team_alien_spawn");
 
 	new_juggernaut->client->sess.spectatorState = SPECTATOR_NOT;
 	new_juggernaut->client->pers.classSelection = G_JuggernautClass();
-	ClientSpawn( new_juggernaut, spawn, origin, angles );
+	ClientSpawn( new_juggernaut, spawn, *old_origin, *old_angles );
+	if ( old_origin && old_angles )
+	{
+		G_TeleportPlayer( new_juggernaut, *old_origin, *old_angles, 100.0f );
+	}
 	ClientUserinfoChanged( new_juggernaut->client->ps.clientNum, false );
 
 	BotSetNavmesh( new_juggernaut, G_JuggernautClass() );
@@ -124,7 +109,8 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 static void G_DemoteJuggernaut( gentity_t *old_juggernaut )
 {
 	old_juggernaut->client->pers.classSelection = PCL_NONE;
-	old_juggernaut->client->sess.restartTeam = G_PreyTeam();
+	old_juggernaut->client->sess.juggRestartTeam = G_PreyTeam();
+	old_juggernaut->client->sess.juggMayTeleport = false;
 }
 
 void G_SwitchJuggernaut( gentity_t *new_juggernaut )
@@ -143,13 +129,28 @@ void G_SwitchJuggernaut( gentity_t *new_juggernaut )
 
 static void G_AssignTeam(gentity_t *ent)
 {
-	team_t target_team = ent->client->sess.restartTeam;
+	team_t target_team = ent->client->sess.juggRestartTeam;
 	Log::Notice("Assigning to team %i", target_team);
 
-	ent->client->sess.restartTeam = TEAM_NONE;
+	ent->client->sess.juggRestartTeam = TEAM_NONE;
 	//ASSERT(target_team > TEAM_NONE && target_team < TEAM_ALL);
 	//if (target_team <= TEAM_NONE || target_team >= TEAM_ALL)
 	//	return;
+
+	// Eww vector lib
+	vec3_t old_o;
+	vec3_t old_a;
+	vec3_t *old_origin = nullptr;
+	vec3_t *old_angles = nullptr;
+	if ( ent->client->sess.juggMayTeleport && Entities::IsAlive(ent) && G_RoomForClassChange(ent, G_JuggernautClass(), old_o) )
+	{
+		// Eww vector lib again
+		const float *a = ent->s.angles;
+		//VectorCopy( o, old_o ); // G_RoomForClassChange did set it to something good already
+		VectorCopy( a, old_a );
+		old_origin = &old_o;
+		old_angles = &old_a;
+	}
 
 	// clear shit
 	G_UnlaggedClear(ent);
@@ -163,7 +164,7 @@ static void G_AssignTeam(gentity_t *ent)
 
 	if ( target_team == G_JuggernautTeam() )
 	{
-		G_SpawnJuggernaut(ent);
+		G_SpawnJuggernaut(ent, old_origin, old_angles);
 	}
 	else
 	{
@@ -216,7 +217,7 @@ static void G_CreateJuggernaut()
 		if ( !ent || !ent->client )
 			continue;
 
-		if ( ent->client->sess.restartTeam != TEAM_NONE )
+		if ( ent->client->sess.juggRestartTeam != TEAM_NONE )
 		{
 			G_AssignTeam( ent );
 		}
