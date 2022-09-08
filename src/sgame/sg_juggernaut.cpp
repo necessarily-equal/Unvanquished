@@ -63,10 +63,14 @@ gentity_t *G_SelectRandomJuggernaut()
 }
 
 // Mark a client to become juggernaut
-static void G_PromoteJuggernaut( gentity_t *new_juggernaut = nullptr )
+// This function is expected to be called only by G_SwitchJuggernaut
+static void G_PromoteJuggernaut( gentity_t *new_juggernaut )
 {
 	if (!new_juggernaut)
+	{
+		Log::Warn("No designated juggernaut, choosing a new juggernaut randomly");
 		new_juggernaut = G_SelectRandomJuggernaut();
+	}
 	if (!new_juggernaut)
 		return; // give up
 
@@ -102,15 +106,6 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 		VectorCopy( a, angles );
 	//}
 
-	// clear shit
-	G_UnlaggedClear(new_juggernaut);
-	auto flags = new_juggernaut->client->ps.eFlags;
-	memset( &new_juggernaut->client->ps, 0, sizeof new_juggernaut->client->ps );
-	memset( &new_juggernaut->client->pmext, 0, sizeof new_juggernaut->client->pmext );
-	new_juggernaut->client->ps.eFlags = flags;
-
-	G_ChangeTeam( new_juggernaut, G_JuggernautTeam() );
-
 	//TODO: send messages
 
 	new_juggernaut->client->sess.spectatorState = SPECTATOR_NOT;
@@ -124,37 +119,44 @@ static void G_SpawnJuggernaut( gentity_t *new_juggernaut )
 	Beacon::Tag( new_juggernaut, G_PreyTeam(), true );
 }
 
-//// Cleanly removes a juggernaut
-//static void G_DemoteJuggernaut( gentity_t *old_juggernaut )
-//{
-//	Log::Notice("Demoting %p from Juggernaut!", old_juggernaut);
-//	old_juggernaut->client->pers.classSelection = PCL_NONE;
-//
-//	ent->client->sess.restartTeam = G_PreyTeam();
-//}
-
-void G_SwitchJuggernaut( gentity_t *new_juggernaut, gentity_t *old_juggernaut )
+// Cleanly removes a juggernaut
+// This function is expected to be called only by G_SwitchJuggernaut
+static void G_DemoteJuggernaut( gentity_t *old_juggernaut )
 {
+	old_juggernaut->client->pers.classSelection = PCL_NONE;
 	old_juggernaut->client->sess.restartTeam = G_PreyTeam();
-	if (new_juggernaut && new_juggernaut->client)
+}
+
+void G_SwitchJuggernaut( gentity_t *new_juggernaut )
+{
+	const team_t juggernautTeam = G_JuggernautTeam();
+	for ( gentity_t *ent = nullptr; (ent = G_IterateEntities(ent)); )
 	{
-		G_PromoteJuggernaut(new_juggernaut);
+		if ( ent && ent->client && G_Team(ent) == juggernautTeam )
+		{
+			G_DemoteJuggernaut(ent);
+		}
 	}
-	else
-	{
-		Log::Warn("No killer, choosing a new juggernaut randomly");
-		G_PromoteJuggernaut();
-	}
+
+	G_PromoteJuggernaut(new_juggernaut);
 }
 
 static void G_AssignTeam(gentity_t *ent)
 {
 	team_t target_team = ent->client->sess.restartTeam;
+	Log::Notice("Assigning to team %i", target_team);
 
 	ent->client->sess.restartTeam = TEAM_NONE;
 	//ASSERT(target_team > TEAM_NONE && target_team < TEAM_ALL);
 	//if (target_team <= TEAM_NONE || target_team >= TEAM_ALL)
 	//	return;
+
+	// clear shit
+	G_UnlaggedClear(ent);
+	auto flags = ent->client->ps.eFlags;
+	memset( &ent->client->ps, 0, sizeof ent->client->ps );
+	memset( &ent->client->pmext, 0, sizeof ent->client->pmext );
+	ent->client->ps.eFlags = flags;
 
 	G_ChangeTeam(ent, target_team);
 	ASSERT(G_Team(ent) == target_team);
@@ -165,13 +167,6 @@ static void G_AssignTeam(gentity_t *ent)
 	}
 	else
 	{
-		// clear shit
-		G_UnlaggedClear(ent);
-		auto flags = ent->client->ps.eFlags;
-		memset( &ent->client->ps, 0, sizeof ent->client->ps );
-		memset( &ent->client->pmext, 0, sizeof ent->client->pmext );
-		ent->client->ps.eFlags = flags;
-
 		// assign to the other team
 		ent->client->sess.spectatorState = SPECTATOR_LOCKED; //free spec?
 		ent->client->pers.classSelection = PCL_NONE;
@@ -180,42 +175,58 @@ static void G_AssignTeam(gentity_t *ent)
 	}
 }
 
-// Pick a juggernaut if there is none
-void G_CheckAndSpawnJuggernaut()
+// Check that there is the correct number of juggernaut playing, if not,
+// schedule some.
+static void G_EnsureJuggernaut()
 {
 	int juggernaut_count = 0;
-	for ( gentity_t *ent = nullptr; (ent = G_IterateEntities(ent)); )
-	{
-		if ( !ent || !ent->client )
-			continue;
-
-		if ( ent->client->sess.restartTeam == TEAM_ALIENS )
-		{
-			G_AssignTeam( ent );
-		}
-	}
 
 	for ( gentity_t *ent = nullptr; (ent = G_IterateEntities(ent)); )
 	{
 		if ( !ent || !ent->client )
 			continue;
 
-		if ( ent->client->sess.restartTeam == TEAM_HUMANS )
-		{
-			G_AssignTeam( ent );
-		}
-
-		if ( G_Team(ent) == G_JuggernautTeam() )
+		if ( G_Team(ent) == G_JuggernautTeam() && Entities::IsAlive(ent) )
 		{
 			juggernaut_count++;
 		}
 	}
 
-	if (juggernaut_count == 1)
-		return; // perfect
-
-	if (juggernaut_count == 0)
-		G_PromoteJuggernaut(); // mark one to become juggernaut on next frame
-	else
+	if (juggernaut_count > 1)
+	{
 		Log::Warn("Huh oh, we have %i juggernauts", juggernaut_count);
+	}
+
+	if (juggernaut_count != 1)
+	{
+		G_SwitchJuggernaut(); // stabilise the situation and mark one to become juggernaut on next frame
+	}
+}
+
+// The rest of the code uses G_SwitchJuggernaut which calls
+// G_{Promote,Demote}Juggernaut to mark the next turn's jugg. This will
+// actually commit and execute this decision.
+//
+// We do so in a predefined place in the code, because game logic tends to be
+// fragile and we want things to be as reliable as possible.
+static void G_CreateJuggernaut()
+{
+	for ( gentity_t *ent = nullptr; (ent = G_IterateEntities(ent)); )
+	{
+		if ( !ent || !ent->client )
+			continue;
+
+		if ( ent->client->sess.restartTeam != TEAM_NONE )
+		{
+			G_AssignTeam( ent );
+		}
+	}
+}
+
+// Pick a juggernaut if there is none
+void G_CheckAndSpawnJuggernaut()
+{
+	G_CreateJuggernaut(); // apply changes that were already scheduled
+	G_EnsureJuggernaut();
+	G_CreateJuggernaut(); // and apply our new changes immediately
 }

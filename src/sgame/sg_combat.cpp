@@ -585,10 +585,10 @@ void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, in
 	trap_LinkEntity( self );
 
 	// TODO: if juggernaut
-	if ( G_Team( self ) == G_JuggernautTeam() )
+	if ( G_Team( self ) == G_JuggernautTeam() && self != attacker )
 	{
-		// we need a new juggernaut
-		G_SwitchJuggernaut( attacker, self );
+		// the attacker becomes the new juggernaut
+		G_SwitchJuggernaut( attacker );
 	}
 	else if ( G_Team( attacker ) == G_JuggernautTeam() && attacker->client )
 	{
