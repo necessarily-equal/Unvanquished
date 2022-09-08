@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "CBSE.h"
 #include "shared/bg_local.h" // MIN_WALK_NORMAL
 #include "Entities.h"
+#include <complex>
 
 #include <glm/geometric.hpp>
 #include <glm/gtx/norm.hpp>
@@ -892,6 +893,43 @@ gentity_t* BotFindBestEnemy( gentity_t *self )
 	{
 		return bestInvisibleEnemy;
 	}
+}
+
+// returns a float between -π and π, representing the direction
+float FindLessRiskyDirection( const gentity_t *self )
+{
+	std::complex<float> direction = { 0, 0 };
+	std::complex<float> self_position = { self->s.origin[0], self->s.origin[1] };
+	for ( gentity_t *target = g_entities; target < &g_entities[level.num_entities - 1]; target++ )
+	{
+		// ignore entities that aren't in use
+		if ( !target->inuse )
+		{
+			continue;
+		}
+
+		if ( !BotEntityIsValidEnemyTarget( self, target ) )
+		{
+			continue;
+		}
+
+		if ( DistanceSquared( self->s.origin, target->s.origin ) > Square( ALIENSENSE_RANGE ) )
+		{
+			continue;
+		}
+
+		std::complex<float> delta = self_position - std::complex<float>{ target->s.origin[0], target->s.origin[1] };
+
+		float distance = std::abs( delta );
+		float weight = tanhf( cbrtf( distance / 100.0f ) ); // FIXME: ×danger
+
+		// change the abs() to be equal to weight
+		delta *= weight/distance;
+
+		direction += delta;
+	}
+
+	return std::arg(direction);
 }
 
 gentity_t* BotFindClosestEnemy( gentity_t *self )

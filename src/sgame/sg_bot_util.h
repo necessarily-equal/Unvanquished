@@ -41,6 +41,7 @@ void BotResetStuckTime( gentity_t *self );
 // entity queries
 int        FindBots( int *botEntityNumbers, int maxBots, team_t team );
 gentity_t* BotFindClosestEnemy( gentity_t *self );
+float FindLessRiskyDirection( const gentity_t *self );
 gentity_t* BotFindBestEnemy( gentity_t *self );
 void       BotFindClosestBuildings( gentity_t *self );
 gentity_t* BotFindBuilding( gentity_t *self, int buildingType, int range );
@@ -113,7 +114,7 @@ extern bool navMeshLoaded;
 
 bool         G_BotNavInit();
 void         G_BotNavCleanup();
-bool     FindRouteToTarget( gentity_t *self, botTarget_t target, bool allowPartial );
+bool     FindRouteToTarget( const gentity_t *self, botTarget_t target, bool allowPartial );
 bool         BotMoveToGoal( gentity_t *self );
 void         BotSetNavmesh( gentity_t  *ent, class_t newClass );
 
