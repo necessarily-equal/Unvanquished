@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "sg_local.h"
 #include "shared/parse.h"
+#include "sg_juggernaut.h"
 #include "Entities.h"
 #include "CBSE.h"
 #include "backend/CBSEBackend.h"
@@ -2499,6 +2500,12 @@ void G_RunFrame( int levelTime )
 
 	G_DecreaseMomentum();
 	G_CalculateAvgPlayers();
+
+	if ( g_gameMode.Get() == "juggernaut" )
+	{
+		G_CheckAndSpawnJuggernaut();
+	}
+
 	G_SpawnClients( TEAM_ALIENS );
 	G_SpawnClients( TEAM_HUMANS );
 	G_UpdateZaps( msec );

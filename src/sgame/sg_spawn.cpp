@@ -1113,6 +1113,12 @@ static void SP_worldspawn()
 		G_LogPrintf( "Warmup: %i", g_warmup.Get() );
 	}
 
+	if ( g_gameMode.Get() == "juggernaut" )
+	{
+		// FIXME: memory safety
+		level.team[ g_juggernautTeam.Get() ].locked = true;
+	}
+
 	level.timelimit = g_timelimit.Get();
 }
 

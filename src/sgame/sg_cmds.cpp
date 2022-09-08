@@ -2480,6 +2480,15 @@ static bool Cmd_Class_internal( gentity_t *ent, const char *s, bool report )
 	clientNum = ent->client - level.clients;
 	newClass = BG_ClassByName( s )->number;
 
+	if ( g_gameMode.Get() == "juggernaut" && g_juggernautTeam.Get() == ent->client->pers.team )
+	{
+		if ( report )
+		{
+			//G_TriggerMenuArgs( ent->client->ps.clientNum, MN_JUGGERNAUT_NO_EVOLVE, newClass );
+		}
+		return false;
+	}
+
 	if ( ent->client->sess.spectatorState != SPECTATOR_NOT )
 	{
 		team_t team;

@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "sg_local.h"
+#include "sg_juggernaut.h"
 #include "Entities.h"
 #include "CBSE.h"
 
@@ -578,6 +579,12 @@ void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, in
 	Beacon::DetachTags( self );
 
 	trap_LinkEntity( self );
+
+	if ( G_Team( self ) == g_juggernautTeam.Get() )
+	{
+		// we need a new juggernaut
+		G_SwitchJuggernaut( inflictor, self );
+	}
 
 	self->client->pers.infoChangeTime = level.time;
 }
