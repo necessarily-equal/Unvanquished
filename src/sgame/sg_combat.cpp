@@ -322,7 +322,7 @@ void G_RewardAttackers( gentity_t *self )
 
 static Cvar::Cvar<int> g_juggernautKillLimit("g_juggernautKillLimit",
 		"how much kills are needed for the juggernaut to win",
-		Cvar::NONE, 30);
+		Cvar::NONE, 12);
 
 void G_PlayerDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int meansOfDeath )
 {
