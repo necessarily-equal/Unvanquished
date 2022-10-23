@@ -1740,7 +1740,7 @@ static void G_ReplenishAlienHealth( gentity_t *self )
 	{
 		if      ( client->ps.stats[ STAT_STATE ] & SS_HEALING_8X )
 		{
-			modifier = 8.0f;
+			modifier = 6.0f;
 		}
 		else if ( client->ps.stats[ STAT_STATE ] & SS_HEALING_4X )
 		{
@@ -1748,7 +1748,7 @@ static void G_ReplenishAlienHealth( gentity_t *self )
 		}
 		else if ( client->ps.stats[ STAT_STATE ] & SS_HEALING_2X )
 		{
-			modifier = 2.0f;
+			modifier = 3.0f;
 		}
 		else
 		{
