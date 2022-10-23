@@ -1012,7 +1012,7 @@ FindSaferDestination( const gentity_t *self )
 			return target;
 	}
 
-	juggernautLogger.Notice("Couldn't find flee point");
+	juggernautLogger.Debug("Couldn't find flee point");
 	return {};
 }
 
