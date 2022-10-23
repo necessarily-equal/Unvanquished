@@ -1909,18 +1909,39 @@ void BotFireWeaponAI( gentity_t *self )
 			break;
 		case WP_ALEVEL3_UPG:
 		{
+			glm::vec3 origin = VEC2GLM( self->s.origin );
+			glm::vec3 forward;
+
 			bool hasBarbs = self->client->ps.ammo > 0;
 			bool outOfClawsRange = distance > LEVEL3_CLAW_UPG_RANGE;
+
 			// We add some protection for barbs so that bots don't
 			// barb themselves too easily. The safety factor
 			// hopefully accounts for the movement of the bot and
 			// its target
 			constexpr float barbSafetyFactor = 5.0f/3.0f;
 			bool barbIsSafe = distance > (barbSafetyFactor * BG_Missile(MIS_BOUNCEBALL)->splashRadius);
+
 			if ( outOfClawsRange && hasBarbs && barbIsSafe )
 			{
 				botCmdBuffer->angles[PITCH] = ANGLE2SHORT( -CalcBarbAimPitch( self, target ) ); //compute and apply correct aim pitch to hit target
-				BotFireWeapon( WPM_TERTIARY, botCmdBuffer ); //goon barb
+
+				glm::vec3 delta = targetPos - origin;
+				AngleVectors( VEC2GLM( self->client->ps.viewangles ), &forward, nullptr, nullptr );
+				// This is 1.0 if the two direction are the
+				// same, 0.0 if they are perpendicular and -1.0
+				// if they are in the opposite direction.
+				// This is to ensure we don't barb the wall
+				// instead of the enemy on the other side of
+				// the corridor because we haven't aimed yet.
+				float scalarAlignment = ScalarProduct2D(delta, forward) / Distance2D(delta) / Distance2D(forward);
+				Log::Warn("scalarAlignment: %f", scalarAlignment);
+				bool barbAimed = scalarAlignment > 0.997; // acos(0.997) is 4.4° in the 2D plane
+
+				if ( barbAimed )
+				{
+					BotFireWeapon( WPM_TERTIARY, botCmdBuffer ); //goon barb
+				}
 			}
 			else if ( distance > LEVEL3_CLAW_UPG_RANGE && self->client->ps.weaponCharge < LEVEL3_POUNCE_TIME_UPG )
 			{
