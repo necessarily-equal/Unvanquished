@@ -139,8 +139,6 @@ bool FixWinding( winding_t *w ){
 			/* create an average point (ydnar 2002-01-26: using nearest-integer weld preference) */
 			SnapWeldVector( w->p[ i ], w->p[ j ], vec );
 			VectorCopy( vec, w->p[ i ] );
-			//VectorAdd( w->p[ i ], w->p[ j ], vec );
-			//VectorScale( vec, 0.5, w->p[ i ] );
 
 			/* move the remaining verts */
 			for ( k = i + 2; k < w->numpoints; k++ )
