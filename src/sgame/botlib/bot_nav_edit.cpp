@@ -129,6 +129,77 @@ static void DrawPath( Bot_t *bot, DebugDrawQuake &dd )
 	dd.depthMask(true);
 }
 
+struct bbox_t {
+	glm::vec3 mins;
+	glm::vec3 maxs;
+};
+struct saved_obstacle_t {
+	bool added;
+	bbox_t bbox;
+};
+extern std::map<int, saved_obstacle_t> savedObstacles;
+extern std::map<int, qhandle_t> obstacleHandles; // handles of detour's obstacles, if any
+
+static void BotDebugDrawObstacle( DebugDrawQuake &dd, const glm::vec3 mins, const glm::vec3 &maxs )
+{
+	glm::vec3 corners_quake[] = {
+		{ mins[0], mins[1], mins[2] },
+		{ maxs[0], mins[1], mins[2] },
+		{ mins[0], maxs[1], mins[2] },
+		{ maxs[0], maxs[1], mins[2] },
+		{ mins[0], mins[1], maxs[2] },
+		{ maxs[0], mins[1], maxs[2] },
+		{ mins[0], maxs[1], maxs[2] },
+		{ maxs[0], maxs[1], maxs[2] },
+	};
+
+	rVec corners[] = {
+		qVec( &corners_quake[0][0] ),
+		qVec( &corners_quake[1][0] ),
+		qVec( &corners_quake[2][0] ),
+		qVec( &corners_quake[3][0] ),
+		qVec( &corners_quake[4][0] ),
+		qVec( &corners_quake[5][0] ),
+		qVec( &corners_quake[6][0] ),
+		qVec( &corners_quake[7][0] ),
+	};
+
+	dd.depthMask(false);
+	const unsigned int color = duRGBA(255,128,128,255);
+	dd.begin(DU_DRAW_LINES, 4.0f);
+
+	int squares[][4] = {
+		{0, 1, 2, 3},
+		{0, 1, 4, 5},
+		{0, 1, 6, 7},
+		{2, 3, 4, 5},
+		{2, 3, 6, 7},
+		{4, 5, 6, 7},
+	};
+	for ( int *sq : squares )
+	{
+		dd.vertex(corners[sq[0]][0], corners[sq[0]][1], corners[sq[0]][2], color);
+		dd.vertex(corners[sq[1]][0], corners[sq[1]][1], corners[sq[1]][2], color);
+		dd.vertex(corners[sq[2]][0], corners[sq[2]][1], corners[sq[2]][2], color);
+		dd.vertex(corners[sq[3]][0], corners[sq[3]][1], corners[sq[3]][2], color);
+
+		dd.vertex(corners[sq[0]][0], corners[sq[0]][1], corners[sq[0]][2], color);
+		dd.vertex(corners[sq[2]][0], corners[sq[2]][1], corners[sq[2]][2], color);
+		dd.vertex(corners[sq[1]][0], corners[sq[1]][1], corners[sq[1]][2], color);
+		dd.vertex(corners[sq[3]][0], corners[sq[3]][1], corners[sq[3]][2], color);
+
+		dd.vertex(corners[sq[0]][0], corners[sq[0]][1], corners[sq[0]][2], color);
+		dd.vertex(corners[sq[3]][0], corners[sq[3]][1], corners[sq[3]][2], color);
+		dd.vertex(corners[sq[1]][0], corners[sq[1]][1], corners[sq[1]][2], color);
+		dd.vertex(corners[sq[2]][0], corners[sq[2]][1], corners[sq[2]][2], color);
+	}
+	//for (size_t i = 0; i < ARRAY_LEN(corners); ++i)
+	//	dd.vertex(corners[i][0], corners[i][1], corners[i][2], color);
+
+	dd.end();
+	dd.depthMask(true);
+}
+
 void BotDebugDrawMesh()
 {
 	static DebugDrawQuake dd;
@@ -158,6 +229,14 @@ void BotDebugDrawMesh()
 	if ( cmd.showportals )
 	{
 		duDebugDrawNavMeshPortals( &dd, *cmd.nav->mesh );
+	}
+
+	//if ( cmd.showportals )
+	{
+		for ( auto &obstacle : savedObstacles )
+		{
+			BotDebugDrawObstacle( dd, obstacle.second.bbox.mins, obstacle.second.bbox.maxs );
+		}
 	}
 
 	duDebugDrawNavMeshWithClosedList(&dd, *cmd.nav->mesh, *cmd.nav->query, DU_DRAWNAVMESH_OFFMESHCONS | DU_DRAWNAVMESH_CLOSEDLIST);
