@@ -947,6 +947,11 @@ void NavmeshGenerator::StartGeneration( class_t species )
 	//height of agent (BBox maxs[2] - BBox mins[2])
 	float height = dimensions->maxs[2] - dimensions->mins[2];
 
+	// jump
+	float gravity = 800.0f / 2.0f;
+	float jumpMagnitude = BG_Class(species)->jumpMagnitude;
+	float climb = config_.stepSize + Square( jumpMagnitude ) / gravity / 2.0f;
+
 	const float cellSize = radius / 4.0f;
 
 	rcCalcGridSize( bmin, bmax, cellSize, &gw, &gh );
@@ -959,7 +964,7 @@ void NavmeshGenerator::StartGeneration( class_t species )
 	d_->cfg.ch = config_.cellHeight;
 	d_->cfg.walkableSlopeAngle = RAD2DEG( acosf( MIN_WALK_NORMAL ) );
 	d_->cfg.walkableHeight = ( int ) ceilf( height / d_->cfg.ch );
-	d_->cfg.walkableClimb = ( int ) floorf( config_.stepSize / d_->cfg.ch );
+	d_->cfg.walkableClimb = ( int ) floorf( climb / d_->cfg.ch );
 	d_->cfg.walkableRadius = ( int ) ceilf( radius / d_->cfg.cs );
 	d_->cfg.maxEdgeLen = 0;
 	d_->cfg.maxSimplificationError = 1.3f;
