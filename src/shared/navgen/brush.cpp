@@ -156,4 +156,114 @@ bool FixWinding( winding_t *w ){
 		valid = false;
 	}
 	return valid;
+
+}
+
+/*
+ * Splits a winding into 4 windings
+ * This assumes a 2D problem where z is special
+ *
+ * This could be extended someday to take a normal that would be special,
+ * should we want wallwalking or something
+ *
+ * if this returns true, the operation succeeded, w1 to w4 are set and source has been freed.
+ */
+bool SplitWinding( winding_t **source, winding_t **w1, winding_t **w2, winding_t **w3, winding_t **w4 );
+bool SplitWinding( winding_t **source, winding_t **w1, winding_t **w2, winding_t **w3, winding_t **w4 )
+{
+	static constexpr float eps = 3.0f; // how small is small enough?
+
+	vec3_t mins = {  HUGE_QFLT,  HUGE_QFLT,  HUGE_QFLT };
+	vec3_t maxs = { -HUGE_QFLT, -HUGE_QFLT, -HUGE_QFLT };
+	vec3_t delta;
+
+	// before
+	if ( *source ) {
+		static int i = 0;
+		if ( i < 100 )
+		{
+			for ( int j = 0; j < (*source)->numpoints; j++ ) {
+				if ( ( fabsf((*source)->p[j][0]) + fabsf((*source)->p[j][1]) + fabsf((*source)->p[j][2]) ) > 140000.0f )
+				{
+					i++;
+					Log::Warn("Before: Large vector (%g %g %g)", (*source)->p[j][0], (*source)->p[j][1], (*source)->p[j][2]);
+				}
+			}
+		}
+	}
+
+	/* check all verts to get the abs min and max */
+	for ( int i = 0; i < (*source)->numpoints; i++ )
+	{
+		for ( int j = 0; j < 3; j++ )
+		{
+			if ( (*source)->p[ i ][ j ] < mins[ j ] )
+			{
+				mins[j] = (*source)->p[ i ][ j ];
+			}
+			if ( (*source)->p[ i ][ j ] > maxs[ j ] )
+			{
+				maxs[j] = (*source)->p[ i ][ j ];
+			}
+		}
+	}
+	if ( fabsf( mins[0] ) > 10000.0f
+	  || fabsf( mins[1] ) > 10000.0f
+	  || fabsf( mins[2] ) > 10000.0f
+	  || fabsf( maxs[0] ) > 10000.0f
+	  || fabsf( maxs[1] ) > 10000.0f
+	  || fabsf( maxs[2] ) > 10000.0f )
+	{
+		// this is unreasonably large, skip it
+		return false;
+	}
+
+	VectorSubtract( maxs, mins, delta );
+	if ( fabsf( maxs[0] - mins[0] ) < eps && fabsf( maxs[1] - mins[1] ) < eps )
+	{
+		return false; // this is already tiny, don't do anything
+	}
+
+	float x_cut = delta[0] / 2.0f + mins[0];
+	float y_cut = delta[1] / 2.0f + mins[1];
+	vec3_t x_cut_plane  = { 1,  0, 0 };
+	vec3_t y_cut_plane  = { 0,  1, 0 };
+	vec3_t x_cut_plane2 = { -1, 0, 0 }; // pointing to the other side
+	vec3_t y_cut_plane2 = { 0, -1, 0 };
+
+	*w1 = *source;
+	*w2 = CopyWinding( *source );
+	*w3 = CopyWinding( *source );
+	*w4 = CopyWinding( *source );
+	*source = nullptr; // to avoid mistakes
+
+	ChopWindingInPlace( w1, x_cut_plane,  x_cut, 0 );
+	ChopWindingInPlace( w2, x_cut_plane2, x_cut, 0 );
+	ChopWindingInPlace( w3, y_cut_plane,  y_cut, 0 );
+	ChopWindingInPlace( w4, y_cut_plane2, y_cut, 0 );
+
+	ASSERT( !*w1 || (*w1)->numpoints >= 3 );
+	ASSERT( !*w2 || (*w2)->numpoints >= 3 );
+	ASSERT( !*w3 || (*w3)->numpoints >= 3 );
+	ASSERT( !*w4 || (*w4)->numpoints >= 3 );
+
+	for ( winding_t *split_w : { *w1, *w2, *w3, *w4 } )
+	{
+		if ( !split_w )
+			continue;
+
+		static int i = 0;
+		if ( i < 100 )
+		{
+			for ( int j = 0; j < split_w->numpoints; j++ ) {
+				if ( ( fabsf(split_w->p[j][0]) + fabsf(split_w->p[j][1]) + fabsf(split_w->p[j][2]) ) > 140000.0f )
+				{
+					i++;
+					Log::Warn("After: Large vector (%g %g %g)", split_w->p[j][0], split_w->p[j][1], split_w->p[j][2]);
+				}
+			}
+		}
+	}
+
+	return true;
 }

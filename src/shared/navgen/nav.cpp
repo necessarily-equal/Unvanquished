@@ -204,6 +204,7 @@ void NavmeshGenerator::LoadBSP()
 
 //need this to get the windings for brushes
 bool FixWinding( winding_t* w );
+bool SplitWinding( winding_t **source, winding_t **w1, winding_t **w2, winding_t **w3, winding_t **w4 );
 
 static void AddVert( std::vector<float> &verts, std::vector<int> &tris, vec3_t vert ) {
 	vec3_t recastVert;
@@ -283,6 +284,7 @@ void NavmeshGenerator::LoadBrushTris( std::vector<float> &verts, std::vector<int
 			winding_t *w = BaseWindingForPlane( plane->normal, plane->dist );
 
 			/* walk the list of brush sides */
+			winding_t *w1, *w2, *w3, *w4;
 			for ( int j = 0; j < numSides && w != nullptr; j++ )
 			{
 				const dbrushside_t *chopSide = &bspBrushSides[j + firstSide];
@@ -299,14 +301,38 @@ void NavmeshGenerator::LoadBrushTris( std::vector<float> &verts, std::vector<int
 
 				/* ydnar: fix broken windings that would generate trifans */
 				FixWinding( w );
+
+//				SplitWinding( &w, &w1, &w2, &w3, &w4 );
+
+				/* ydnar: fix broken windings that would generate trifans */
+				FixWinding( w );
 			}
 
 			if ( w ) {
+				/* ydnar: fix broken windings that would generate trifans */
+				FixWinding( w );
+
 				for ( int j = 2; j < w->numpoints; j++ ) {
 					AddTri( verts, tris, w->p[0], w->p[j - 1], w->p[j] );
 				}
 				FreeWinding( w );
 			}
+//			else
+//			{
+//				for ( winding_t *split_w : { w1, w2, w3, w4 } )
+//				{
+//					/* ydnar: fix broken windings that would generate trifans */
+//					FixWinding( split_w );
+//
+//					if ( !split_w )
+//						continue;
+//
+//					for ( int j = 2; j < split_w->numpoints; j++ ) {
+////						AddTri( verts, tris, split_w->p[0], split_w->p[j - 1], split_w->p[j] );
+//					}
+//					FreeWinding( split_w );
+//				}
+//			}
 		}
 	}
 }
