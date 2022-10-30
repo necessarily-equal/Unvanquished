@@ -452,6 +452,9 @@ void NavmeshGenerator::LoadGeometry()
 	if ( initStatus_.code != NavgenStatus::OK ) return;
 	LoadPatchTris( verts, tris );
 
+	ASSERT( tris.size() % 3 == 0 );
+	ASSERT( verts.size() % 3 == 0 );
+
 	numTris = tris.size() / 3;
 	numVerts = verts.size() / 3;
 
