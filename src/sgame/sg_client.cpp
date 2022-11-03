@@ -1675,7 +1675,7 @@ void ClientSpawn( gentity_t *ent, gentity_t *spawn, const vec3_t origin, const v
 	client->ps.stats[ STAT_FUEL ]    = JETPACK_FUEL_MAX;
 	client->ps.stats[ STAT_CLASS ] = ent->client->pers.classSelection;
 
-	VectorSet( client->ps.grapplePoint, 0.0f, 0.0f, 1.0f );
+	client->ps.grapplePoint = { 0.0f, 0.0f, 1.0f };
 
 	//clear the credits array
 	// TODO: Handle in HealthComponent or ClientComponent.
