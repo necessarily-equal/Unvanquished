@@ -5137,7 +5137,7 @@ bool G_admin_builder( gentity_t *ent )
 	}
 	else
 	{
-		start = VEC2GLM( ent->client->ps.origin );
+		start = ent->client->ps.origin;
 	}
 
 	glm::vec3 end = start + 1000.f * forward;

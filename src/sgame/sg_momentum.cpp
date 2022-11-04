@@ -251,7 +251,7 @@ static float AddMomentum( momentum_t type, team_t team, float amount,
 
 			if ( client && client->pers.team == team )
 			{
-				event = G_NewTempEntity( VEC2GLM( client->ps.origin ), EV_MOMENTUM );
+				event = G_NewTempEntity( client->ps.origin, EV_MOMENTUM );
 				event->r.svFlags = SVF_SINGLECLIENT;
 				event->r.singleClient = client->num();
 			}

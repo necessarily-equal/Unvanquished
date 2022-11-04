@@ -761,7 +761,7 @@ static void FirebombMissileThink( gentity_t *self )
 
 	// ignite alien buildables in range
 	neighbor = nullptr;
-	while ( ( neighbor = G_IterateEntitiesWithinRadius( neighbor, VEC2GLM( self->s.origin ), FIREBOMB_IGNITE_RANGE ) ) )
+	while ( ( neighbor = G_IterateEntitiesWithinRadius( neighbor, self->s.origin, FIREBOMB_IGNITE_RANGE ) ) )
 	{
 		if ( neighbor->s.eType == entityType_t::ET_BUILDABLE && G_Team( neighbor ) == TEAM_ALIENS &&
 		     G_LineOfSight( self, neighbor ) )
@@ -771,7 +771,7 @@ static void FirebombMissileThink( gentity_t *self )
 	}
 
 	// set floor below on fire (assumes the firebomb lays on the floor!)
-	G_SpawnFire( self->s.origin, upwards, self->parent );
+	G_SpawnFire( &self->s.origin[0], upwards, self->parent );
 
 	// spam fire
 	for ( subMissileNum = 0; subMissileNum < FIREBOMB_SUBMISSILE_COUNT; subMissileNum++ )
@@ -783,7 +783,7 @@ static void FirebombMissileThink( gentity_t *self )
 		VectorNormalize( dir );
 
 		// the submissile's parent is the attacker
-		m = G_SpawnMissile( MIS_FIREBOMB_SUB, self->parent, self->s.origin, dir, nullptr, G_FreeEntity, level.time + 10000 );
+		m = G_SpawnMissile( MIS_FIREBOMB_SUB, self->parent, &self->s.origin[0], dir, nullptr, G_FreeEntity, level.time + 10000 );
 
 		// randomize missile speed
 		VectorScale( m->s.pos.trDelta, ( rand() / ( float )RAND_MAX ) + 0.5f, m->s.pos.trDelta );
@@ -1123,7 +1123,7 @@ static void FindZapChainTargets( zap_t *zap )
 			continue;
 		}
 
-		distance = Distance( ent->s.origin, enemy->s.origin );
+		distance = glm::distance( ent->s.origin, enemy->s.origin );
 
 		if ( G_Team( enemy ) == TEAM_HUMANS
 				&& ( enemy->client || enemy->s.eType == entityType_t::ET_BUILDABLE )
@@ -1192,7 +1192,7 @@ static void CreateNewZap( gentity_t *creator, gentity_t *target )
 		zap->numTargets = 1;
 
 		// Zap chains only originate from alive entities.
-		if (target->entity->Damage((float)LEVEL2_AREAZAP_DMG, creator, VEC2GLM( target->s.origin ),
+		if (target->entity->Damage((float)LEVEL2_AREAZAP_DMG, creator, target->s.origin,
 		                           VEC2GLM( forward ), DAMAGE_NO_LOCDAMAGE, MOD_LEVEL2_ZAP)) {
 			FindZapChainTargets( zap );
 
@@ -1201,7 +1201,7 @@ static void CreateNewZap( gentity_t *creator, gentity_t *target )
 				float damage = LEVEL2_AREAZAP_DMG * ( 1 - powf( ( zap->distances[ i ] /
 				               LEVEL2_AREAZAP_CHAIN_RANGE ), LEVEL2_AREAZAP_CHAIN_FALLOFF ) ) + 1;
 
-				zap->targets[i]->entity->Damage(damage, zap->creator, VEC2GLM( zap->targets[i]->s.origin ),
+				zap->targets[i]->entity->Damage(damage, zap->creator, zap->targets[i]->s.origin,
 				                       VEC2GLM( forward ), DAMAGE_NO_LOCDAMAGE, MOD_LEVEL2_ZAP);
 			}
 		}
@@ -1373,7 +1373,6 @@ void G_ChargeAttack( gentity_t *self, gentity_t *victim )
 {
 	int    damage;
 	int    i;
-	vec3_t forward;
 
 	if ( !self->client || self->client->ps.weaponCharge <= 0 ||
 	     !( self->client->ps.stats[ STAT_STATE ] & SS_CHARGING ) ||
@@ -1387,8 +1386,7 @@ void G_ChargeAttack( gentity_t *self, gentity_t *victim )
 		return;
 	}
 
-	VectorSubtract( victim->s.origin, self->s.origin, forward );
-	VectorNormalize( forward );
+	glm::vec3 forward = glm::normalize( VEC2GLM(victim->s.origin) - self->ps.origin );
 
 	// For buildables, track the last MAX_TRAMPLE_BUILDABLES_TRACKED buildables
 	//  hit, and do not do damage if the current buildable is in that list
@@ -1410,7 +1408,7 @@ void G_ChargeAttack( gentity_t *self, gentity_t *victim )
 
 	damage = LEVEL4_TRAMPLE_DMG * self->client->ps.weaponCharge / LEVEL4_TRAMPLE_DURATION;
 
-	victim->entity->Damage((float)damage, self, VEC2GLM( victim->s.origin ), VEC2GLM( forward ),
+	victim->entity->Damage((float)damage, self, VEC2GLM( victim->s.origin ), forward,
 	                       DAMAGE_NO_LOCDAMAGE, MOD_LEVEL4_TRAMPLE);
 
 	SendMeleeHitEvent( self, victim, nullptr );
@@ -1434,7 +1432,6 @@ static meansOfDeath_t ModWeight( const gentity_t *self )
 void G_ImpactAttack( gentity_t *self, gentity_t *victim )
 {
 	float  impactVelocity, impactEnergy, impactDamage;
-	vec3_t knockbackDir;
 	int    attackerMass;
 
 	// self must be a client
@@ -1474,11 +1471,11 @@ void G_ImpactAttack( gentity_t *self, gentity_t *victim )
 	impactDamage = impactEnergy * IMPACTDMG_JOULE_TO_DAMAGE;
 
 	// calculate knockback direction
-	VectorSubtract( victim->s.origin, self->client->ps.origin, knockbackDir );
+	glm::vec3 knockbackDir = glm::normalize( VEC2GLM(victim->s.origin) - self->client->ps.origin );
 	VectorNormalize( knockbackDir );
 
-	victim->entity->Damage((float)impactDamage, self, VEC2GLM( victim->s.origin ),
-						   VEC2GLM( knockbackDir ), DAMAGE_NO_LOCDAMAGE, ModWeight(self));
+	victim->entity->Damage((float)impactDamage, self, victim->s.origin,
+			knockbackDir, DAMAGE_NO_LOCDAMAGE, ModWeight(self));
 }
 
 void G_WeightAttack( gentity_t *self, gentity_t *victim )
