@@ -61,8 +61,22 @@ static void FailAssertion(const char* expression, const char* file, int line)
 }
 #endif
 
+/*
+ * Detour uses some short* on the data it allocates. This causes trouble if the
+ * data isn't 16bit-aligned. This is a workaround.
+ */
+MALLOC_LIKE void *customDtMalloc(size_t size, dtAllocHint)
+{
+	void *ptr;
+	if ( posix_memalign( &ptr, sizeof(short)*8, size ) == 0 )
+		return ptr;
+	else
+		return nullptr;
+}
+
 void BotInit()
 {
+	dtAllocSetCustom(customDtMalloc, free);
 #ifdef DEBUG_BUILD
 	dtAssertFailSetCustom(FailAssertion);
 #endif
