@@ -868,7 +868,18 @@ static NavgenStatus rasterizeTileLayers( Geometry& geo, rcContext &context, int 
 		return { NavgenStatus::TRANSIENT_FAILURE, "Failed to create compact heightfield for navigation mesh" };
 	}
 
-	if ( !rcErodeWalkableAreaByBox( &context, cfg.walkableRadius, *rc.chf ) ) {
+	// Erode navmesh around walls to avoid kissing corners.
+	//
+	// We use a +1 for wall erosion to avoid having a tiny wall edge going
+	// over the walkable region because of integer rounding.
+	//
+	// Even a tiny corner would block the bot which would try to cut
+	// corners. Since bots no longer use traces to fine-tune their
+	// navigation[1], this has become a problem[2].
+	//
+	// [1]: https://github.com/Unvanquished/Unvanquished/pull/2259
+	// [2]: https://github.com/Unvanquished/Unvanquished/issues/2263
+	if ( !rcErodeWalkableAreaByBox( &context, cfg.walkableRadius + 1, *rc.chf ) ) {
 		return { NavgenStatus::TRANSIENT_FAILURE, "Unable to erode walkable surfaces" };
 	}
 
